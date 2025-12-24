@@ -1,0 +1,28 @@
+---
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { type Locale, getLangMeta } from "@/configs/i18n.config";
+import VLangSwitcher from '@/components/LangSwitcher.vue'
+
+// 1) 让数组保持字面量类型，并校验它确实是 Locale[]
+const locales = [
+  "zh",
+  "en",
+  "th",
+  "ko",
+  "vi",
+  "km",
+] as const satisfies readonly Locale[];
+
+// 2) 去掉现有前缀（把所有语言都包含上）
+const rawPath = Astro.url.pathname.replace(/^\/(zh|en|th|km|ko|vi)(\/|$)/, "");
+
+const links = locales.map((l) => ({
+  code: l, // l 的类型是 Locale
+  href: getRelativeLocaleUrl(l, rawPath.replace(/^\//, "")),
+  label: getLangMeta(l).label, // 如果需要 label 文本
+}));
+
+const lang = (Astro.currentLocale ?? "zh") as Locale;
+---
+
+<VLangSwitcher links={links} lang={lang}  client:only />

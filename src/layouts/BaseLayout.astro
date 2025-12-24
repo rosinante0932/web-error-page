@@ -1,0 +1,80 @@
+---
+import { resolveLocale, type Locale } from "@/configs/i18n.config";
+import BaseHead from "../components/BaseHead.astro";
+import LangSwitcher from "../components/LangSwitcher.astro";
+import VConsole from "../components/VConsole.astro";
+import '~/assets/css/base.css';
+const locale: Locale = resolveLocale(Astro.currentLocale);
+const { title, description } = Astro.props;
+const url = new URL(Astro.url);
+const search = Astro.url.search;
+console.log(Astro.url.search, "========search");
+console.log(Astro.url, "==========Astro.url");
+console.log(url, "==============url");
+---
+
+<html lang={Astro.currentLocale} class="h-[100%]">
+  <head>
+    <BaseHead {title} {description} />
+    <!-- 先执行首帧主题脚本 -->
+    <script is:inline>
+      (() => {
+        try {
+          const raw = localStorage.getItem("ui"); // ⬅️ 确保与 pinia 持久化的 key 一致
+          const sel = raw ? JSON.parse(raw).theme : "system";
+          const prefersDark = window.matchMedia?.(
+            "(prefers-color-scheme: dark)"
+          ).matches;
+          const actual =
+            sel === "dark"
+              ? "dark"
+              : sel === "light"
+                ? "light"
+                : prefersDark
+                  ? "dark"
+                  : "light";
+          if (actual === "dark") document.documentElement.classList.add("dark");
+          document.documentElement.dataset.theme = actual;
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body
+    class="safearea-h h-[100%] font-sans antialiased text-gray-800 xl:bg-[url('~/assets/svg/bg.svg')] bg-cover bg-center bg-no-repeat"
+  >
+    <header
+      class="container lg:max-w-[1280px] mx-auto p-4 flex items-center justify-between"
+    >
+      <a href={`/${search}`} class="text-xl font-bold">
+        <img
+          width="90"
+          height="36"
+          loading="eager"
+          decoding="async"
+          class="lg:hidden"
+          src={`/assets/svg/logo-${locale === "zh" ? "zh" : locale === "en" ? "en" : "en"}.svg`}
+          alt="403 logo"
+        />
+      </a>
+      <nav class="flex items-center gap-3">
+        <LangSwitcher />
+      </nav>
+    </header>
+    <main class="container mx-auto p-4">
+      <slot />
+    </main>
+    <VConsole enabled={false} />
+    <!-- <footer class="container mx-auto p-4 text-center text-sm text-gray-500">
+      © {new Date().getFullYear()} AstroVue. All rights reserved.
+    </footer> -->
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    color-scheme: light;
+  }
+  .container {
+    max-width: 1100px;
+  }
+</style>

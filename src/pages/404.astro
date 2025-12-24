@@ -1,0 +1,11 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import { t, resolveLocale, type Locale } from '../lib/i18n'
+
+const locale: Locale = resolveLocale(Astro.currentLocale)
+---
+<BaseLayout title={t(locale, 'notFoundTitle')}>
+  <h1 class="text-4xl font-bold mb-4">{t(locale, 'notFoundTitle')}</h1>
+  <p class="mb-8">{t(locale, 'notFoundMessage')}</p>
+  <a href={`/${locale}/`} class="text-blue-600 hover:underline">{t(locale, 'goHome')}</a>
+</BaseLayout>
