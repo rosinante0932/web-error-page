@@ -6,7 +6,7 @@ const { enabled = false } = Astro.props;
     (async () => {
       // 动态导入 vConsole
       const { default: VConsole } = await import('vconsole');
-      new VConsole();
+      new VConsole({});
     })();
   </script>
 )}

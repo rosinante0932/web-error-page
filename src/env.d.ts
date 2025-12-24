@@ -21,3 +21,9 @@ declare module "astro:env/server" {
     // 还可以保留官方提供的 API
     export function getSecret(name: string): string | undefined
 }
+
+declare module "lodash-es" {
+  export * from "lodash";
+  import _ from "lodash";
+  export default _;
+}

@@ -1,29 +1,101 @@
 ---
 import { resolveLocale, type Locale } from "@/configs/i18n.config";
 import BaseHead from "../components/BaseHead.astro";
-import LangSwitcher from "../components/LangSwitcher.astro";
-import VConsole from "../components/VConsole.astro";
-import '~/assets/css/base.css';
+import Qrcode from "@/components/Qrcode.vue";
+import api from "@/api";
+
 const locale: Locale = resolveLocale(Astro.currentLocale);
-const { title, description } = Astro.props;
+const { title, description, keyword } = Astro.props;
+
 const url = new URL(Astro.url);
-const search = Astro.url.search;
-console.log(Astro.url.search, "========search");
-console.log(Astro.url, "==========Astro.url");
-console.log(url, "==============url");
+const searchParams = url.searchParams;
+const siteParam = searchParams.get("site") || "";
+const referer = Astro.locals.referer ?? siteParam ?? "";
+
+const keptQuery = siteParam ? `?site=${encodeURIComponent(siteParam)}` : "";
+
+const base = `/${Astro.currentLocale}`;
+const href = (p: string) => {
+  const path = p === "/" ? "" : p;
+  return `${base}${path}${keptQuery}`;
+};
+
+const KV_KEYS = {
+  tg: "official.contact.us.telegram.text",
+  chat: "official.chat.web.url.text",
+} as const;
+
+type KvItem = { value?: string } & Record<string, any>;
+type KvRes = { tg?: KvItem; chat?: KvItem };
+
+// module-scope cache
+const __kvCache: Map<string, { exp: number; p: Promise<any> }> =
+  (globalThis as any).__kvCache || ((globalThis as any).__kvCache = new Map());
+
+const KV_TTL_MS = 60_000; // 默认 60 秒，你可以改
+
+function cachedKvGet(k: string) {
+  const now = Date.now();
+  const hit = __kvCache.get(k);
+  if (hit && hit.exp > now) return hit.p;
+
+  const p = api.getKvConfig(
+    { k },
+    {
+      headers: {
+        "x-forwarded-for": Astro.locals.local_ip,
+        "x-real-ip": Astro.locals.local_ip,
+      },
+    },
+  );
+
+  __kvCache.set(k, { exp: now + KV_TTL_MS, p });
+  return p;
+}
+
+// ✅ 并发拉取两个 key（一次渲染拿全）
+// ✅ 失败兜底：不阻塞页面渲染
+let kv: KvRes = {};
+try {
+  const [tgRes, chatRes] = await Promise.all([
+    cachedKvGet(KV_KEYS.tg),
+    cachedKvGet(KV_KEYS.chat),
+  ]);
+  kv.tg = tgRes?.data;
+  kv.chat = chatRes?.data;
+} catch {
+  kv = {};
+}
+
+const clientIp = Astro.locals.clientIP || Astro.locals.local_ip || "";
+
+const posts = {
+  referer,
+  clientIp,
+  custom_ip: clientIp,
+  tg: kv.tg?.value || "",
+  chatUrl: kv.chat?.value || "",
+};
+
+const floatBtn =
+  "mb-[20px] xl:w-[70px] xl:h-[70px] w-10 h-10 rounded-[50%] shadow-[0_16px_24px_0_rgba(19,78,238,0.2)]";
+const navGroup = "group flex flex-col items-center justify-center";
+const navLink = "group-hover:text-[#2996f5] group-hover:font-600";
+const hoverArrow = "group-hover:opacity-100 opacity-0";
 ---
 
-<html lang={Astro.currentLocale} class="h-[100%]">
+<html lang={Astro.currentLocale} class="h-[100%] bg-[#f0f5f9]">
   <head>
-    <BaseHead {title} {description} />
-    <!-- 先执行首帧主题脚本 -->
+    <BaseHead {title} {description} {keyword} />
+
     <script is:inline>
       (() => {
+        // ---------- theme ----------
         try {
-          const raw = localStorage.getItem("ui"); // ⬅️ 确保与 pinia 持久化的 key 一致
+          const raw = localStorage.getItem("ui");
           const sel = raw ? JSON.parse(raw).theme : "system";
           const prefersDark = window.matchMedia?.(
-            "(prefers-color-scheme: dark)"
+            "(prefers-color-scheme: dark)",
           ).matches;
           const actual =
             sel === "dark"
@@ -36,37 +108,498 @@ console.log(url, "==============url");
           if (actual === "dark") document.documentElement.classList.add("dark");
           document.documentElement.dataset.theme = actual;
         } catch {}
+
+        // ---------- nav active ----------
+        const LOCALES = ["zh", "en", "th", "ko", "vi", "km"];
+        const re = new RegExp(`^\\/(${LOCALES.join("|")})(\\/|$)`);
+        const fullPath = location.pathname;
+        const path = fullPath.replace(re, "/").replace(/\/+$/, "") || "/";
+
+        window.requestAnimationFrame(() => {
+          document.querySelectorAll("[data-nav]").forEach((el) => {
+            const nav =
+              (el.getAttribute("data-nav") || "").replace(/\/+$/, "") || "/";
+            const active =
+              nav === "/"
+                ? path === "/"
+                : path === nav || path.startsWith(nav + "/");
+
+            if (!active) return;
+
+            el.style.color = "#2996f5";
+            el.style.fontWeight = "600";
+
+            const arrow = el.nextElementSibling;
+            if (arrow && arrow.tagName === "IMG") arrow.style.opacity = "1";
+          });
+
+          // teach 系列：高亮“新手教程”
+          if (path.startsWith("/teach")) {
+            const dropdown = document.getElementById("teach-dropdown");
+            const arrow = document.getElementById("teach-arrow");
+            dropdown
+              ?.querySelector("span")
+              ?.setAttribute("style", "color:#2996f5;font-weight:600;");
+            if (arrow) arrow.style.opacity = "1";
+          }
+        });
       })();
     </script>
   </head>
-  <body
-    class="safearea-h h-[100%] font-sans antialiased text-gray-800 xl:bg-[url('~/assets/svg/bg.svg')] bg-cover bg-center bg-no-repeat"
-  >
+
+  <body class="h-[100%] font-sans antialiased text-gray-800 overflow-x-hidden">
+    <!-- PC Header -->
     <header
-      class="container lg:max-w-[1280px] mx-auto p-4 flex items-center justify-between"
+      class="xs:hidden sm:hidden md:hidden lg:hidden xl:block h-[70px] fixed left-0 right-0 z-100 bg-[transparent]"
     >
-      <a href={`/${search}`} class="text-xl font-bold">
-        <img
-          width="90"
-          height="36"
-          loading="eager"
-          decoding="async"
-          class="lg:hidden"
-          src={`/assets/svg/logo-${locale === "zh" ? "zh" : locale === "en" ? "en" : "en"}.svg`}
-          alt="403 logo"
-        />
-      </a>
-      <nav class="flex items-center gap-3">
-        <LangSwitcher />
-      </nav>
+      <div
+        class="container lg:max-w-[1280px] mx-auto py-4 flex items-center justify-between"
+      >
+        <h1
+          title="易换官网：便捷快速，安全可靠，全球多国币种，一站式解决！轻松畅享全球支付与兑换服务~"
+        >
+          <a href={href("/")} class="text-xl font-bold">
+            <img
+              width="90"
+              height="36"
+              loading="eager"
+              decoding="async"
+              src={`/assets/svg/logo-${locale === "zh" ? "zh" : locale === "en" ? "en" : "en"}.svg`}
+              alt="易换官网商标"
+            />
+          </a>
+        </h1>
+
+        <div class={navGroup}>
+          <a href={href("/")} data-nav="/" class={navLink}>首页</a>
+          <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
+        </div>
+
+        <div class={navGroup}>
+          <a href={href("/download")} data-nav="/download" class={navLink}
+            >下载APP</a
+          >
+          <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
+        </div>
+
+        <div class={navGroup}>
+          <a href={href("/aboutus")} data-nav="/aboutus" class={navLink}
+            >关于我们</a
+          >
+          <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
+        </div>
+
+        <div class={navGroup}>
+          <a href={href("/service")} data-nav="/service" class={navLink}
+            >易换服务</a
+          >
+          <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
+        </div>
+
+        <div class={navGroup}>
+          <a href={href("/contactus")} data-nav="/contactus" class={navLink}
+            >联系我们</a
+          >
+          <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
+        </div>
+
+        <div class="flex items-center justify-center">
+          <div class="relative inline-block" id="teach-dropdown">
+            <span
+              class="cursor-pointer text-[#1f2937] hover:text-[#2996f5] hover:font-600"
+            >
+              新手教程
+            </span>
+
+            <img
+              src="/assets/header/hover.svg"
+              alt=""
+              class="mx-auto opacity-0 transition-opacity"
+              id="teach-arrow"
+            />
+
+            <ul
+              id="teach-menu"
+              class="absolute top-[50px] left-[-50px]
+             w-[180px] bg-white py-[10px]
+             shadow-[0_10px_30px_rgba(0,0,0,0.12)]
+             opacity-0 translate-y-2 pointer-events-none
+             transition-all duration-200 ease-out"
+            >
+              <li>
+                <a
+                  href={href("/teach-yh/register")}
+                  data-nav="/teach-yh/register"
+                  class="block p-[10px] text-[#7281a2] text-[14px]
+                 hover:bg-[#eef5fe] hover:text-[#2996f5]"
+                >
+                  易换APP使用教程
+                </a>
+              </li>
+
+              <li>
+                <a
+                  href={href("/teach-dx/download")}
+                  data-nav="/teach-dx/download"
+                  class="block p-[10px] text-[#7281a2] text-[14px]
+                 hover:bg-[#eef5fe] hover:text-[#2996f5]"
+                >
+                  德信教程
+                </a>
+              </li>
+
+              <li>
+                <a
+                  href={href("/teach-mk/deposit")}
+                  data-nav="/teach-mk/deposit"
+                  class="block p-[10px] text-[#7281a2] text-[14px]
+                 hover:bg-[#eef5fe] hover:text-[#2996f5]"
+                >
+                  MK教程
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class={navGroup}>
+          <a href={href("/qa")} data-nav="/qa" class={navLink}>常见问题</a>
+          <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
+        </div>
+      </div>
     </header>
-    <main class="container mx-auto p-4">
+
+    <!-- Mobile Header -->
+    <header
+      class="xl:hidden block fixed left-0 right-0 z-100 py-2 px-4
+      flex items-center justify-between
+      bg-[linear-gradient(0deg,#edf2ff,#edf2ff),linear-gradient(0deg,#fff,#fff)]"
+    >
+      <img src="/assets/header/logo.svg" class="h-7" alt="" />
+      <div>
+        <img
+          id="menuBtn"
+          src="/assets/header/menu.svg"
+          alt="菜单"
+          class="h-5"
+          aria-label="打开菜单"
+          aria-haspopup="dialog"
+          aria-controls="mobileDrawer"
+        />
+      </div>
+    </header>
+
+    <!-- Drawer -->
+    <dialog
+      id="mobileDrawer"
+      class="m-0 p-0 w-full max-w-none h-[100dvh] bg-transparent"
+    >
+      <div data-close class="fixed inset-0 bg-black/45"></div>
+
+      <aside
+        class="fixed right-0 top-0 h-[100dvh] w-[78vw] max-w-[360px] bg-[#f3f5fe] rounded-l-2xl shadow-xl translate-x-0"
+      >
+        <div class="flex items-center justify-end p-4">
+          <img
+            data-close
+            src="/assets/header/close.svg"
+            alt="关闭"
+            class="h-5"
+            aria-label="关闭菜单"
+            aria-haspopup="dialog"
+            aria-controls="mobileDrawer"
+          />
+        </div>
+
+        <nav class="px-5 pb-8">
+          <a
+            data-nav="/"
+            class="block py-4 text-base text-[#0f172a]"
+            href={href("/")}>首页</a
+          >
+          <a
+            data-nav="/download"
+            class="block py-4 text-base text-[#0f172a]"
+            href={href("/download")}>下载APP</a
+          >
+          <a
+            data-nav="/aboutus"
+            class="block py-4 text-base text-[#0f172a]"
+            href={href("/aboutus")}>关于我们</a
+          >
+          <a
+            data-nav="/service"
+            class="block py-4 text-base text-[#0f172a]"
+            href={href("/service")}>易换服务</a
+          >
+          <a
+            data-nav="/contactus"
+            class="block py-4 text-base text-[#0f172a]"
+            href={href("/contactus")}>联系我们</a
+          >
+          <a
+            data-nav="/teach-yh/register"
+            class="block py-4 text-base text-[#0f172a]"
+            href={href("/teach-yh/register")}>新手教程</a
+          >
+          <a
+            data-nav="/qa"
+            class="block py-4 text-base text-[#0f172a]"
+            href={href("/qa")}>常见问题</a
+          >
+        </nav>
+      </aside>
+    </dialog>
+
+    <main class="container mx-auto py-4">
       <slot />
+
+      <!-- Floating Buttons -->
+      <ul class="fixed z-10 xl:right-10 right-2 xl:bottom-10 bottom-15">
+        <a href={posts.tg} target="_blank" rel="noopener noreferrer">
+          <li class={floatBtn}>
+            <img
+              src="/assets/home/16.svg"
+              alt="telegram"
+              class="xl:w-[70px] xl:h-[70px] w-10 h-10"
+            />
+          </li>
+        </a>
+
+        <a href={posts.chatUrl} target="_blank" rel="noopener noreferrer">
+          <li class={floatBtn}>
+            <img
+              src="/assets/home/17.svg"
+              alt="客服链接"
+              class="xl:w-[70px] xl:h-[70px] w-10 h-10"
+            />
+          </li>
+        </a>
+
+        <a href={href("/download")}>
+          <li
+            class="shadow-[0_16px_24px_0_rgba(19,78,238,0.2)] mb-[20px] rounded-[50%]
+              bg-[linear-gradient(127.31deg,#3feae4_-9.27%,#5383ff_95.74%)]
+              xl:w-[70px] xl:h-[70px] w-10 h-10 flex items-center justify-center"
+          >
+            <img
+              src="/assets/home/18.svg"
+              alt="下载"
+              class="xl:w-[40px] xl:h-[40px] w-6 h-6"
+            />
+          </li>
+        </a>
+      </ul>
     </main>
-    <VConsole enabled={false} />
-    <!-- <footer class="container mx-auto p-4 text-center text-sm text-gray-500">
-      © {new Date().getFullYear()} AstroVue. All rights reserved.
-    </footer> -->
+
+    <!-- PC Footer -->
+    <footer class="xs:hidden sm:hidden md:hidden lg:hidden xl:block bg-[#fff]">
+      <div
+        class="flex container lg:max-w-[1280px] mx-auto justify-between items-center"
+      >
+        <dl class="flex gap-10 items-center justify-between py-[34px]">
+          <dt class="w-[100px] flex items-center">
+            <img src="/assets/yhicon.png" alt="" class="w-[80px] h-[80px]" />
+          </dt>
+          <dd class="grid gap-x-20 gap-y-5 grid-cols-4">
+            <a href={href("/")} data-nav="/">首页</a>
+            <a href={href("/aboutus")} data-nav="/aboutus">关于我们</a>
+            <a href={href("/contactus")} data-nav="/contactus">联系我们</a>
+            <a href={href("/qa")} data-nav="/qa">常见问题</a>
+            <a href={href("/download")} data-nav="/download">下载APP</a>
+            <a href={href("/service")} data-nav="/service">易换服务</a>
+            <a href={href("/teach-yh/register")} data-nav="/teach-yh/register"
+              >新手教程</a
+            >
+          </dd>
+        </dl>
+
+        <ul
+          class="bg-[linear-gradient(rgba(70,204,237,0.21),_rgb(77,165,247))]
+          rounded-lg h-[130px] flex items-center justify-center flex-col w-[120px]"
+        >
+          <Qrcode
+            iconSize="20"
+            client:idle
+            url={href("/download")}
+            size={100}
+            className="w-[70px] h-[70px] flex items-center justify-center bg-[#fff] mt-[20px]"
+          />
+          <p class="py-[3px]">
+            <span class="text-[14px] text-[#fff]">下载APP</span>
+          </p>
+        </ul>
+      </div>
+    </footer>
+
+    <!-- Mobile Footer -->
+    <footer class="flex xl:hidden bg-[#fff] p-4 pb-20 justify-between">
+      <ul
+        class="bg-[linear-gradient(rgba(70,204,237,0.21),_rgb(77,165,247))]
+        w-20 rounded-lg h-25 flex items-center justify-center flex-col"
+      >
+        <Qrcode
+          iconSize="20"
+          client:idle
+          url={href("/download")}
+          size={60}
+          className="w-20 h-20 flex items-center justify-center mt-[20px]"
+        />
+        <p class="py-[3px]">
+          <span class="text-xs text-[#fff]">下载APP</span>
+        </p>
+      </ul>
+
+      <nav class="grid gap-x-8 gap-y-6 grid-cols-3 text-sm">
+        <a href={href("/")} data-nav="/">首页</a>
+        <a href={href("/aboutus")} data-nav="/aboutus">关于我们</a>
+        <a href={href("/contactus")} data-nav="/contactus">联系我们</a>
+        <a href={href("/qa")} data-nav="/qa">常见问题</a>
+        <a href={href("/download")} data-nav="/download">下载APP</a>
+        <a href={href("/service")} data-nav="/service">易换服务</a>
+        <a href={href("/teach-yh/register")} data-nav="/teach-yh/register"
+          >新手教程</a
+        >
+      </nav>
+    </footer>
+
+    <script is:inline>
+      (function () {
+        // ---------- scroll header bg ----------
+        if (!window.__scrollBound) {
+          window.__scrollBound = true;
+          let ticking = false;
+          const onScroll = () => {
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(() => {
+              const oHeader = document.querySelector("header");
+              if (oHeader) {
+                oHeader.style.backgroundColor =
+                  window.scrollY >= 1 ? "#fff" : "transparent";
+              }
+              ticking = false;
+            });
+          };
+          window.addEventListener("scroll", onScroll, { passive: true });
+        }
+
+        // ---------- dropdown hover ----------
+        if (!window.__teachBound) {
+          window.__teachBound = true;
+          const dropdown = document.getElementById("teach-dropdown");
+          const menu = document.getElementById("teach-menu");
+          const arrow = document.getElementById("teach-arrow");
+
+          if (dropdown && menu && arrow) {
+            let timer;
+            const open = () => {
+              clearTimeout(timer);
+              menu.classList.remove(
+                "opacity-0",
+                "translate-y-2",
+                "pointer-events-none",
+              );
+              menu.classList.add(
+                "opacity-100",
+                "translate-y-0",
+                "pointer-events-auto",
+              );
+              arrow.style.opacity = "1";
+            };
+
+            const close = () => {
+              timer = setTimeout(() => {
+                menu.classList.add(
+                  "opacity-0",
+                  "translate-y-2",
+                  "pointer-events-none",
+                );
+                menu.classList.remove(
+                  "opacity-100",
+                  "translate-y-0",
+                  "pointer-events-auto",
+                );
+                arrow.style.opacity = "0";
+              }, 120);
+            };
+
+            dropdown.addEventListener("mouseenter", open);
+            dropdown.addEventListener("mouseleave", close);
+          }
+        }
+
+        // ---------- mobile drawer ----------
+        if (!window.__drawerBound) {
+          window.__drawerBound = true;
+          const btn = document.getElementById("menuBtn");
+          const dlg = document.getElementById("mobileDrawer");
+
+          console.log(dlg);
+          console.log(btn);
+
+          if (!btn || !dlg) {
+            return false;
+          }
+
+          let scrollY = 0;
+          function lockScroll() {
+            scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            document.body.style.position = "fixed";
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.left = "0";
+            document.body.style.right = "0";
+            document.body.style.width = "100%";
+            document.body.style.overflow = "hidden";
+            document.body.style.touchAction = "none";
+          }
+          function unlockScroll() {
+            const top = document.body.style.top;
+            document.body.style.position = "";
+            document.body.style.top = "";
+            document.body.style.left = "";
+            document.body.style.right = "";
+            document.body.style.width = "";
+            document.body.style.overflow = "";
+            document.body.style.touchAction = "";
+            const y = top ? Math.abs(parseInt(top, 10)) : scrollY;
+            window.scrollTo(0, y);
+          }
+
+          function openDrawer() {
+            if (typeof dlg.showModal === "function") dlg.showModal();
+            else dlg.setAttribute("open", "");
+            lockScroll();
+            btn.setAttribute("aria-expanded", "true");
+          }
+
+          function closeDrawer() {
+            if (dlg.open) dlg.close();
+            unlockScroll();
+            btn.setAttribute("aria-expanded", "false");
+            btn.focus();
+          }
+
+          btn.addEventListener("click", openDrawer);
+
+          dlg.addEventListener("click", (e) => {
+            const target = e.target;
+            if (target && target.closest && target.closest("[data-close]")) {
+              closeDrawer();
+            }
+          });
+
+          dlg.addEventListener("close", () => {
+            unlockScroll();
+            btn.setAttribute("aria-expanded", "false");
+          });
+
+          // 调试
+          window.__openDrawer = openDrawer;
+          window.__closeDrawer = closeDrawer;
+        }
+      })();
+    </script>
   </body>
 </html>
 

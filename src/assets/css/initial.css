@@ -5,3 +5,39 @@
   justify-content: center;
   background-image: linear-gradient(to right, #339dff, #1649ff) !important;
 }
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+strong {
+  color: #11254e;
+}
+
+span {
+  color: #7281a2;
+}
+
+h2 {
+  font-weight: 600;
+  font-size: 40px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  padding: 0;
+  margin: 0;
+  font-size: 0;
+  line-height: 1;
+}
+
+a {
+  outline: none;
+}

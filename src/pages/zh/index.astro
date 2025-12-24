@@ -1,298 +1,393 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DOCKER_PROXY_IP } from "astro:env/server";
-import { HttpsProxyAgent } from "https-proxy-agent";
-import axios from "axios";
-import { highlightPlaceholders } from "@/utils/common";
-import API from "@/api/index.js";
-import { t, resolveLocale, type Locale } from "@/lib/i18n";
-import ForbiddenImage from "@/components/Forbidden.vue";
-import nodeFetch from "@/services/service.node-fetch";
-import undiciService from "@/services/service.undici";
-import gotService from "@/services/service.got";
-import superagentService from "@/services/service.superagent";
-import service from "@/services/service.astro-fetch";
-import Httpservice from "@/services/service.http";
 import "@/assets/css/initial.css";
-import RetryButton from "@/components/RetryButton.vue";
+import Qrcode from "@/components/Qrcode.vue";
 
-const proxy = DOCKER_PROXY_IP; // 你的代理地址
+const title = "易换官网-首页";
 
-const agent = new HttpsProxyAgent(proxy);
+const referer = Astro.locals.referer ?? "";
+const url = new URL(Astro.url);
+const siteParam = url.searchParams.get("site") || "";
 
-const dockerNetAgentOptions =
-  // DOCKER_PROXY_NET 让运维加到docker-compose的环境变量里面了，所以本地没有
-  process.env.DOCKER_PROXY_NET === "true"
-    ? {
-        httpsAgent: agent,
-        httpAgent: agent,
-        timeout: 8000,
-      }
-    : {};
+const keptQuery = siteParam ? `?site=${encodeURIComponent(siteParam)}` : "";
 
-const locale: Locale = resolveLocale(Astro.currentLocale);
-const title = t(locale, "访问受限制");
-const referer = Astro.locals.referer;
-
-let posts = {
-  ip: "",
-  referer,
-  country: "",
-  city: "",
-  value: "",
-  local_ip: "",
-  clientIp: Astro.locals.clientIP,
-  custom_ip: Astro.locals.clientIP,
+// 站内链接：带 locale，避免中间件 302
+const base = `/${Astro.currentLocale}`;
+const href = (p: string) => {
+  const path = p === "/" ? "" : p;
+  return `${base}${path}${keptQuery}`;
 };
 
-console.log(Astro.locals.clientIP, "客户端ip");
+const downloadUrl = href("/download");
 
-console.log(process.env.DOCKER_PROXY_NET, "==================DOCKER_PROXY_NET");
-
-const restrictionHtml = highlightPlaceholders(
-  t(
-    locale,
-    "您所在的地区已被禁止访问我们的网站，给您造成的不便，敬请见谅。如有任何疑问，请联系24小时在线客服，我们将竭诚为您服务。"
-  )
-);
-
-// try {
-//   const res = await undiciService.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res---0");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---0");
-// }
-
-try {
-  const res = await API.getKvConfig(
-    {
-      k: "official.chat.web.url.text",
-    },
-    {
-      headers: {
-        "x-forwarded-for": Astro.locals.local_ip,
-        "x-real-ip": Astro.locals.local_ip,
-      },
-    }
-  );
-
-  console.log(" Astro.locals.local_ip", Astro.locals.local_ip);
-
-  posts = {
-    ...posts,
-    ...res.data,
-  };
-
-  console.log(res.data, "正确获取归属地的 ---1");
-
-  console.log(res, "res---1");
-} catch (error) {
-  console.log(error, "--报错获取归属地的---1");
-}
-
-// try {
-//   const res = await gotService.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   console.log(res.data, "正确获取归属地的---3");
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res----");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---3");
-// }
-
-// try {
-//   const res = await superagentService.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   console.log(res.data, "正确获取归属地的---4");
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res----4");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---4");
-// }
-
-// try {
-//   const res = await service.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   console.log(res.data, "正确获取归属地的---5");
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res----5");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---5");
-// }
-
-// try {
-//   const res = await Httpservice.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   console.log(res.data, "正确获取归属地的---6");
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res----");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---6");
-// }
-
-// try {
-//   const res = await axios.get("https://api.ipify.org", {
-//     ...dockerNetAgentOptions,
-//     timeout: 8000,
-//   });
-
-//   console.log(res.data, "服务器ip");
-
-//   posts = {
-//     ...posts,
-//     ip: res.data,
-//   };
-// } catch (error) {
-//   console.log(error, "ip 获取错误");
-// }
+const btnCls =
+  "cursor-pointer flex text-[#fff] font-600 rounded-[40px] items-center justify-center py-3 px-8 bg-[linear-gradient(127.31deg,#3feae4_-9.27%,#5383ff_95.74%)]";
+const btnClsWithGap = `${btnCls} ml-4`;
 ---
 
 <BaseLayout {title}>
-  <input type="hidden" value={`客户端的custom_ip: ${JSON.stringify(posts)}`} />
-  <input type="hidden" value={`客户端的custom_ip: ${posts.custom_ip}`} />
-  <input type="hidden" value={`local_ip: ${posts.local_ip}`} />
 
-  <input type="hidden" value={`客户端的ip: ${posts.ip}`} />
-  <input type="hidden" value={`服务端的ip: ${posts.clientIp}`} />
-  <input type="hidden" value={`从哪里跳过来的: ${posts.referer}`} />
-  <input type="hidden" value={`BOSS: ${process.env.BOSS}`} />
-  <input type="hidden" value={`客服链接: ${posts.value}`} />
-  <input type="hidden" value={`国家: ${posts.country}`} />
-  <input type="hidden" value={`城市: ${posts.city}`} />
+  <div data-referer={referer} style="display:none"></div>
+
   <!-- pc -->
-
-  <div
-    class="mt-30 xs:hidden sm:hidden md:hidden lg:hidden xl:flex h-[100%] items-center justify-center flex gap-10"
+  <section
+    class="container lg:max-w-[1280px] mx-auto mt-[70px] xs:hidden sm:hidden md:hidden lg:hidden xl:block h-[800px] relative"
   >
-    <!-- <img src={Img} alt={'403图片'} /> -->
-    <ForbiddenImage client:only />
-    <div class="h-[100%] flex flex-col justify-center max-w-[410px]">
-      <h1 class="pb-[24px]">
+    <div class="translate-y-[100px] relative z-1">
+      <h2>
         <img
-          width="115"
-          height="46"
-          loading="eager"
-          decoding="async"
-          src={`/assets/svg/logo-${locale === "zh" ? "zh" : locale === "en" ? "en" : "en"}.svg`}
-          alt="403 logo"
+          src="/assets/home/00.svg"
+          alt="易换一键货币兑换"
+          class="w-[433px] h-[78px]"
         />
-      </h1>
-      <h2 class="text-[#11254E] text-4xl font-600 pb-[10px]">
-        {t(locale, "访问受限制")}
       </h2>
-      <h3 class="pb-[10px] text-[20px]">
-        {t(locale, "您的IP所在地")}：<span class="text-[#2996F5]"
-          >{String(posts.country)} {String(posts.city)}
-        </span>
+      <h3 class="mt-[35px] text-[#7281a2] leading-8 text-[20px]">
+        便捷快速，安全可靠，全球多国币种，一站式解决！<br />
+        轻松畅享全球支付与兑换服务~
       </h3>
-
-      <h3 class="mt-[10px] text-[20px] pb-[30px]">
-        <span class="text-[#2996F5] font-600 ">
-          {String(posts.ip)}
-        </span>
-      </h3>
-
-      <!-- <h3 class="mt-[10px]">
-        <span class="text-[red]">
-          {String(posts.local_ip)}
-        </span>
-      </h3> -->
-
-      <p class="text-[20px] pr-10 leading-8" set:html={restrictionHtml} />
-      <div class="pt-5">
-        <a href={posts.value}>
-          <button class="btn-primary"> {t(locale, "联系客服")} </button></a
-        >
-        <RetryButton
-          title={t(locale, "尝试重新访问")}
-          class={`btn-info ml-4`}
-          client:only
-        />
-      </div>
     </div>
-  </div>
-  <!-- h5 -->
-  <div class="lg:grid xl:hidden">
-    <h2 class="text-center text-2xl text-[#011E42] font-semibold">
-      {t(locale, "访问受限制")}
+
+    <div class="flex translate-y-[150px]">
+      <a href={downloadUrl}>
+        <button class={btnCls}>
+          <img
+            src="/assets/home/iOS.svg"
+            alt="iOS下载"
+            class="w-[24px] h-[24px]"
+          />
+          <span class="pl-1 text-[#fff]">iOS下载</span>
+        </button>
+      </a>
+
+      <a href={downloadUrl}>
+        <button class={btnClsWithGap}>
+          <img
+            src="/assets/home/android.svg"
+            alt="安卓下载"
+            class="w-[24px] h-[24px]"
+          />
+          <span class="pl-1 text-[#fff]">安卓下载</span>
+        </button>
+      </a>
+    </div>
+
+    <img src="/assets/home/01.png" alt="" class="absolute left-[432px] top-0 z-0" />
+
+    <div class="grid grid-cols-4 gap-4 absolute bottom-0 left-0 right-0">
+      <ul class="p-[30px] rounded-[40px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/02.svg" alt="" class="w-[64px] h-[64px]" />
+        <h3 class="py-[20px]">
+          <span class="text-[24px] font-600 text-[#11254e]">一键充U 快速提U</span>
+        </h3>
+        <p><strong class="text-[16px] text-[#7281a2]">安全无忧</strong></p>
+      </ul>
+
+      <ul class="p-[30px] rounded-[40px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/03.svg" alt="" class="w-[64px] h-[64px]" />
+        <h3 class="py-[20px]">
+          <span class="text-[24px] font-600 text-[#11254e]">充U提U 零手续费</span>
+        </h3>
+        <p><strong class="text-[16px] text-[#7281a2]">至高立省15U/笔</strong></p>
+      </ul>
+
+      <ul class="p-[30px] rounded-[40px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/04.svg" alt="" class="w-[64px] h-[64px]" />
+        <h3 class="py-[20px]">
+          <span class="text-[24px] font-600 text-[#11254e]">超低换汇 极速到账</span>
+        </h3>
+        <p><strong class="text-[16px] text-[#7281a2]">汇率比市面行情更优惠</strong></p>
+      </ul>
+
+      <ul class="p-[30px] rounded-[40px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/05.svg" alt="" class="w-[64px] h-[64px]" />
+        <h3 class="py-[20px]">
+          <span class="text-[24px] font-600 text-[#11254e]">支持多币种互换</span>
+        </h3>
+        <p><strong class="text-[16px] text-[#7281a2]">丰富的币种选择满足您的需求</strong></p>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 业务优势 PC -->
+  <section
+    class="container lg:max-w-[1280px] mx-auto pt-[150px] xs:hidden sm:hidden md:hidden lg:hidden xl:block gap-10 min-h-[654px]"
+  >
+    <h2 class="flex items-center justify-center py-[20px]">
+      <span class="text-[40px] text-[#11254e] font-600">易换业务优势</span>
     </h2>
-    <h3 class="text-center text-[#969696] mt-2">
-      {t(locale, "您的IP所在地")}：<span class="text-[#2996F5]"
-        >{String(posts.country)} {String(posts.city)}
-      </span>
-    </h3>
-    <h3 class="text-center font-600 text-[#2996F5] mt-2">{String(posts.ip)}</h3>
-    <!-- <h3 class="text-center text-[red] mt-2">{String(posts.local_ip)}</h3> -->
-    <ForbiddenImage class="h-[235px] m-auto mt-7.5 block" client:only />
-    <!-- <Image
-      src={import("~/assets/svg/403.svg")}
-      alt="403 logo"
-    /> -->
-    <p
-      class="text-xs/5 text-[#011E42] text-center"
-      set:html={restrictionHtml}
-    />
-    <a href={posts.value}>
-      <button
-        class="test inline-flex items-center justify-center mt-7.5
-      h-[44px] w-[100%] gap-[9.69px]
-      rounded-[23.25px]
-      text-white text-[16px] font-600
-      bg-gradient-to-r from-[#339DFF] to-[#1649FF]
-      shadow-[0_0_16px_rgba(51,157,255,0.2)]
-      transition-all-300 hover:opacity-90 active:scale-98"
-        >{t(locale, "联系客服")}
-      </button>
-    </a>
 
-    <div
-      class="inline-block w-[100%]
-    p-[.1px] rounded-[23.25px]
-    bg-[linear-gradient(90deg,#339DFF_0%,#1649FF_100%)]
-    shadow-[0_0_16px_rgba(51,157,255,0.2)] mt-4"
-    >
-      <!-- 内层：按钮主体 + 实线蓝色描边（inset 1px） -->
-      <RetryButton
-        title={t(locale, "尝试重新访问")}
-        class={`h-[44px] px-6 w-[100%]
-      rounded-[23.25px]
-      inline-flex items-center justify-center gap-[9.69px]
-      bg-white text-[#1649FF] text-[16px] font-600
-      shadow-[inset_0_0_0_1px_#1649FF]
-      transition-all-300 hover:bg-white/100 active:scale-98`}
-        client:only
-      />
+    <div class="grid grid-cols-3 gap-30 mt-[20px]">
+      <ul class="flex flex-col items-center justify-center">
+        <img src="/assets/home/06.png" alt="多重安全保障" class="w-[290px] h-[290px]" />
+        <div class="relative w-[150px] h-[40px]">
+          <div class="w-full h-full bg-[#66b2f3] rounded-tl-[20px] rounded-br-[20px] -skew-x-8 absolute"></div>
+          <p class="w-full h-full flex items-center justify-center absolute left-0 top-0">
+            <img src="/assets/home/no1.svg" alt="多重安全保障 icon" />
+            <span class="text-[#fff] text-[24px] font-600 pl-3">NO.01</span>
+          </p>
+        </div>
+        <h3 class="py-[20px]">
+          <span class="text-[32px] font-600 text-[#11254e]">多重安全保障</span>
+        </h3>
+        <h4><span class="text-[24px] text-[#7281a2] font-400">有效保障您的资金安全</span></h4>
+      </ul>
+
+      <ul class="flex flex-col items-center justify-center">
+        <img src="/assets/home/07.png" alt="快捷支付" class="w-[290px] h-[290px]" />
+        <div class="relative w-[150px] h-[40px]">
+          <div class="w-full h-full bg-[#66b2f3] rounded-tl-[20px] rounded-br-[20px] -skew-x-8 absolute"></div>
+          <p class="w-full h-full flex items-center justify-center absolute left-0 top-0">
+            <img src="/assets/home/no2.svg" alt="快捷支付 icon" />
+            <span class="text-[#fff] text-[24px] font-600 pl-3">NO.02</span>
+          </p>
+        </div>
+        <h3 class="py-[20px]">
+          <span class="text-[32px] font-600 text-[#11254e]">快捷支付</span>
+        </h3>
+        <h4><span class="text-[24px] text-[#7281a2] font-400">充值转账、换汇提现，快捷高效</span></h4>
+      </ul>
+
+      <ul class="flex flex-col items-center justify-center">
+        <img src="/assets/home/08.png" alt="多币种支持" class="w-[290px] h-[290px]" />
+        <div class="relative w-[150px] h-[40px]">
+          <div class="w-full h-full bg-[#66b2f3] rounded-tl-[20px] rounded-br-[20px] -skew-x-8 absolute"></div>
+          <p class="w-full h-full flex items-center justify-center absolute left-0 top-0">
+            <img src="/assets/home/no3.svg" alt="多币种支持 icon" />
+            <span class="text-[#fff] text-[24px] font-600 pl-3">NO.03</span>
+          </p>
+        </div>
+        <h3 class="py-[20px]">
+          <span class="text-[32px] font-600 text-[#11254e]">多币种支持</span>
+        </h3>
+        <h4><span class="text-[24px] text-[#7281a2] font-400">跨地区优惠汇率</span></h4>
+      </ul>
     </div>
+  </section>
+
+  <!-- 为什么选择 PC -->
+  <section
+    class="container lg:max-w-[1280px] mx-auto pt-[70px] xs:hidden sm:hidden md:hidden lg:hidden xl:block gap-10 min-h-[620px]"
+  >
+    <h2 class="flex items-center justify-center py-[50px]">
+      <span class="text-[40px] text-[#11254e] font-600">为什么选择易换？</span>
+    </h2>
+
+    <div class="grid grid-cols-2 gap-10">
+      <ul class="flex items-center shadow-[0_16px_24px_0_rgba(49,76,154,0.102)] p-[30px] rounded-[30px]">
+        <img src="/assets/home/09.svg" alt="全球化" class="w-[60px] h-[60px] mr-5" />
+        <div>
+          <h3 class="text-[28px] text-[#11254e] py-[10px] font-bold">全球化</h3>
+          <h4 class="leading-6">
+            <span class="text-[16px] text-[#7281a2] font-400">
+              管理全球130个国家境内外资金，扩展您在全球的<br />业务范围
+            </span>
+          </h4>
+        </div>
+      </ul>
+
+      <ul class="flex items-center shadow-[0_16px_24px_0_rgba(49,76,154,0.102)] p-[30px] rounded-[30px]">
+        <img src="/assets/home/10.svg" alt="高速" class="w-[60px] h-[60px] mr-5" />
+        <div>
+          <h3 class="text-[28px] text-[#11254e] py-[10px] font-bold">高速</h3>
+          <h4 class="leading-6">
+            <span class="text-[16px] text-[#7281a2] font-400">
+              凭借智能自动路由技术，为企业提供<br />最佳资金路径
+            </span>
+          </h4>
+        </div>
+      </ul>
+
+      <ul class="flex items-center shadow-[0_16px_24px_0_rgba(49,76,154,0.102)] p-[30px] rounded-[30px]">
+        <img src="/assets/home/11.svg" alt="资金安全" class="w-[60px] h-[60px] mr-5" />
+        <div>
+          <h3 class="text-[28px] text-[#11254e] py-[10px] font-bold">资金安全</h3>
+          <h4 class="leading-6">
+            <span class="text-[16px] text-[#7281a2] font-400">
+              与各大银行、外贸公司战略合作，交易灵活、安全、稳<br />定、快速，建立合作，实现共赢
+            </span>
+          </h4>
+        </div>
+      </ul>
+
+      <ul class="flex items-center shadow-[0_16px_24px_0_rgba(49,76,154,0.102)] p-[30px] rounded-[30px]">
+        <img src="/assets/home/12.svg" alt="售后服务" class="w-[60px] h-[60px] mr-5" />
+        <div>
+          <h3 class="text-[28px] text-[#11254e] py-[10px] font-bold">售后服务</h3>
+          <h4 class="leading-6">
+            <span class="text-[16px] text-[#7281a2] font-400">
+              专业的售后团队，具备售前、售中、售后一站式服<br />务，专业答疑及快速提供解决方案
+            </span>
+          </h4>
+        </div>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 下载 PC -->
+  <section
+    class="container lg:max-w-[1280px] mx-auto pt-[70px] xs:hidden sm:hidden md:hidden lg:hidden xl:block gap-10 min-h-[852px]"
+  >
+    <div class="grid grid-cols-2 gap-20">
+      <ul class="flex items-center justify-center flex-col">
+        <img src="/assets/home/13.png" alt="" class="w-[86px] h-[86px]" />
+        <h2 class="py-[16px]">
+          <span class="text-[#11254e] text-[40px] font-600">下载体验易换APP</span>
+        </h2>
+        <p class="leading-8">
+          <span class="text-[20px] text-[#7281a2]">
+            USDT、菲律宾PHP 、美国USD、香港HKD、迪拜AED、欧洲 <br />
+            EUR、台湾TWD、泰国THB、越南VND等多国币种互换
+          </span>
+        </p>
+
+        <Qrcode
+          client:only
+          url={downloadUrl}
+          size={120}
+          className="w-[160px] h-[160px] flex items-center justify-center bg-[#fff] mt-[20px]"
+        />
+
+        <div class="mt-[50px]">
+          <span class="bg-[#46b4f8] text-[24px] font-600 text-[#fff] py-2 px-8">扫码下载</span>
+        </div>
+      </ul>
+
+      <ul class="flex items-center">
+        <img src="/assets/home/15.png" alt="" class="w-[450px] h-[750px]" />
+      </ul>
+    </div>
+  </section>
+
+  <!-- h5 -->
+  <div class="lg:grid xl:hidden bg-[#eef2fe]">
+    <section class="mt-10">
+      <h2>
+        <img class="mx-auto h-9.5" src="/assets/home/00.svg" alt="易换一键货币兑换" />
+      </h2>
+
+      <h3 class="text-center py-[2px]"><span class="text-xs">便捷快速，安全可靠，全球多国币种，一站式解决！</span></h3>
+      <h3 class="text-center py-[2px]"><span class="text-xs">轻松畅享全球支付与兑换服务~</span></h3>
+    </section>
+
+    <section><img src="/assets/home/m/01.png" alt="" /></section>
+
+    <section class="grid grid-cols-2 gap-3 -translate-y-70 h-0">
+      <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/02.svg" alt="" class="w-10 h-10 mx-auto" />
+        <h3 class="py-[10px] text-center"><span class="text-sm font-600 text-[#11254e]">一键充U 快速提U</span></h3>
+        <p class="text-xs text-[#7281a2] text-center">安全无忧</p>
+      </ul>
+      <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/03.svg" alt="" class="w-10 h-10 mx-auto" />
+        <h3 class="py-[10px] text-center"><span class="text-sm font-600 text-[#11254e]">充U提U 零手续费</span></h3>
+        <p class="text-xs text-[#7281a2] text-center">至高立省15U/笔</p>
+      </ul>
+      <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/04.svg" alt="" class="w-10 h-10 mx-auto" />
+        <h3 class="py-[10px] text-center"><span class="text-sm font-600 text-[#11254e]">超低换汇 极速到账</span></h3>
+        <p class="text-xs text-[#7281a2] text-center">汇率比市面行情更优惠</p>
+      </ul>
+      <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/05.svg" alt="" class="w-10 h-10 mx-auto" />
+        <h3 class="py-[10px] text-center"><span class="text-sm font-600 text-[#11254e]">支持多币种互换</span></h3>
+        <p class="text-xs text-[#7281a2] text-center">丰富的币种选择满足您的需求</p>
+      </ul>
+    </section>
+
+    <section class="pt-10">
+      <h2 class="text-center pb-8"><span class="text-5 text-[#11254e]">易换业务优势</span></h2>
+
+      <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/06.png" alt="" class="w-26 h-26 mx-auto" />
+        <h3 class="py-[10px] text-center"><span class="text-5 font-600 text-[#11254e]">多重安全保障</span></h3>
+        <p class="text-sm text-[#7281a2] text-center">有效保障您的资金安全</p>
+      </ul>
+
+      <ul class="mt-2 p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/07.png" alt="" class="w-26 h-26 mx-auto" />
+        <h3 class="py-[10px] text-center"><span class="text-5 font-600 text-[#11254e]">快捷支付</span></h3>
+        <p class="text-sm text-[#7281a2] text-center">充值转账、换汇提现，快捷高效</p>
+      </ul>
+
+      <ul class="mt-2 p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+        <img src="/assets/home/08.png" alt="" class="w-26 h-26 mx-auto" />
+        <h3 class="py-[10px] text-center"><span class="text-5 font-600 text-[#11254e]">多币种支持</span></h3>
+        <p class="text-sm text-[#7281a2] text-center">跨地区优惠汇率</p>
+      </ul>
+    </section>
+
+    <section class="pt-10">
+      <h2 class="text-center pb-8"><span class="text-5 text-[#11254e]">为什么选择易换？</span></h2>
+
+      <div class="grid grid-cols-2 gap-3">
+        <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+          <img src="/assets/home/09.svg" alt="" class="w-12 h-12 mx-auto" />
+          <h3 class="py-[10px] text-center"><span class="text-4 font-600 text-[#11254e]">全球化</span></h3>
+          <p class="text-xs text-[#7281a2] text-center">管理全球130个国家境内外资金，扩展您在全球的业务范围</p>
+        </ul>
+
+        <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+          <img src="/assets/home/10.svg" alt="" class="w-12 h-12 mx-auto" />
+          <h3 class="py-[10px] text-center"><span class="text-4 font-600 text-[#11254e]">高速</span></h3>
+          <p class="text-xs text-[#7281a2] text-center">凭借智能自动路由技术，为企业提供最佳资金路径</p>
+        </ul>
+
+        <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+          <img src="/assets/home/11.svg" alt="" class="w-12 h-12 mx-auto" />
+          <h3 class="py-[10px] text-center"><span class="text-4 font-600 text-[#11254e]">资金安全</span></h3>
+          <p class="text-xs text-[#7281a2] text-center">
+            与各大银行、外贸公司战略合作，交易灵活、安全、稳定、快速，建立合作，实现共赢
+          </p>
+        </ul>
+
+        <ul class="p-[10px] rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]">
+          <img src="/assets/home/12.svg" alt="" class="w-12 h-12 mx-auto" />
+          <h3 class="py-[10px] text-center"><span class="text-4 font-600 text-[#11254e]">售后服务</span></h3>
+          <p class="text-xs text-[#7281a2] text-center">
+            专业的售后团队，具备售前、售中、售后一站式服务，专业答疑及快速提供解决方案
+          </p>
+        </ul>
+      </div>
+    </section>
+
+    <section class="mt-15 mb-20">
+      <h2><img class="m-auto w-12" src="/assets/yhicon.png" alt="" /></h2>
+      <h2 class="py-3 text-center"><span class="text-5 text-[#11254e]">下载体验易换APP</span></h2>
+      <h3 class="text-center">
+        <span class="text-xs text-[#7281a2] text-center">
+          USDT、菲律宾PHP 、美国USD、香港HKD、迪拜AED、欧洲 <br />
+          EUR、台湾TWD、泰国THB、越南VND等多国币种互换
+        </span>
+      </h3>
+
+      <Qrcode
+        client:only
+        url={downloadUrl}
+        size={100}
+        className="w-[130px] h-[130px] flex items-center mx-auto justify-center bg-[#fff] mt-[20px]"
+      />
+
+      <div class="mt-4 text-center">
+        <span class="bg-[#46b4f8] text-4 font-600 text-[#fff] py-1 px-2">扫码下载</span>
+      </div>
+
+      <img src="/assets/home/15.png" alt="" class="w-90% mx-auto" />
+    </section>
+
+    <nav class="fixed bottom-4 left-0 right-0 flex items-center justify-evenly">
+      <a href={downloadUrl}>
+        <button class={btnCls}>
+          <img src="/assets/home/iOS.svg" alt="iOS下载" class="w-[24px] h-[24px]" />
+          <span class="pl-1 text-[#fff]">iOS下载</span>
+        </button>
+      </a>
+
+      <a href={downloadUrl}>
+        <button class={btnCls}>
+          <img src="/assets/home/android.svg" alt="安卓下载" class="w-[24px] h-[24px]" />
+          <span class="pl-1 text-[#fff]">安卓下载</span>
+        </button>
+      </a>
+    </nav>
   </div>
 </BaseLayout>

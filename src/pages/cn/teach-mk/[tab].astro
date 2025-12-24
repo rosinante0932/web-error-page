@@ -1,0 +1,258 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+
+type Tab = {
+    key: "deposit" | "withdraw";
+    label: string;
+    title: string;
+    dir: string;
+    count: number;
+};
+
+const BASE_ROUTE = "/zh/teach-mk";
+const ASSET_BASE = "/assets/teach-mk";
+
+const tabs: Tab[] = [
+    {
+        key: "deposit",
+        label: "存款教程",
+        title: "存款教程 - MK使用教程",
+        dir: "1",
+        count: 9,
+    },
+    {
+        key: "withdraw",
+        label: "取款教程",
+        title: "取款教程 - MK使用教程",
+        dir: "2",
+        count: 8,
+    },
+];
+
+export function getStaticPaths() {
+    return tabs.map((t) => ({ params: { tab: t.key } }));
+}
+
+const { tab } = Astro.params;
+const current = tabs.find((t) => t.key === tab) ?? tabs[0];
+
+if (!tabs.some((t) => t.key === tab)) {
+    return Astro.redirect(`${BASE_ROUTE}/${tabs[0].key}`, 302);
+}
+
+const canonical = new URL(Astro.url);
+canonical.search = "";
+canonical.hash = "";
+
+// 当前教程图片列表
+const images = Array.from(
+    { length: current.count },
+    (_, i) => `${ASSET_BASE}/${current.dir}/${i + 1}.png`,
+);
+
+const hrefOf = (key: string) => `${BASE_ROUTE}/${key}`;
+---
+
+<BaseLayout title={current.title} description="MK使用教程，存款/提现步骤说明">
+    <link rel="canonical" href={canonical.toString()} />
+    <link rel="alternate" hreflang="zh" href={canonical.toString()} />
+    <link
+        rel="alternate"
+        hreflang="en"
+        href={canonical.toString().replace("/zh/", "/en/")}
+    />
+    <link
+        rel="alternate"
+        hreflang="th"
+        href={canonical.toString().replace("/zh/", "/th/")}
+    />
+    <link
+        rel="alternate"
+        hreflang="vi"
+        href={canonical.toString().replace("/zh/", "/vi/")}
+    />
+    <link
+        rel="alternate"
+        hreflang="ko"
+        href={canonical.toString().replace("/zh/", "/ko/")}
+    />
+    <link
+        rel="alternate"
+        hreflang="km"
+        href={canonical.toString().replace("/zh/", "/km/")}
+    />
+    <link
+        rel="alternate"
+        hreflang="x-default"
+        href={canonical.toString().replace("/zh/", "/en/")}
+    />
+
+    <!-- pc -->
+    <section
+        class="relative lg:max-w-[1280px] mx-auto xs:hidden sm:hidden md:hidden lg:hidden xl:block container py-10 mt-[70px]"
+    >
+        <h2 title="MK使用教程">
+            <img
+                src="/assets/teach-mk/01.png"
+                alt="MK使用教程"
+                class="mx-auto h-[120px]"
+            />
+        </h2>
+
+        <nav
+            class="mt-8 flex flex-wrap justify-center gap-4"
+            aria-label="教程导航"
+        >
+            {
+                tabs.map((t) => (
+                    <a
+                        title={t.label}
+                        href={`${BASE_ROUTE}/${t.key}`}
+                        class={`px-12 text-[18px] py-4 rounded-full shadow font-bold
+              ${
+                  t.key === current.key
+                      ? "bg-[linear-gradient(127.31deg,#3feae4_-9.27%,#5383ff_95.74%)] text-white"
+                      : "bg-white text-[#6b7280]"
+              }`}
+                        aria-current={
+                            t.key === current.key ? "page" : undefined
+                        }
+                    >
+                        {t.label}
+                    </a>
+                ))
+            }
+        </nav>
+
+        <article
+            class="w-[900px] flex flex-wrap justify-center mx-auto mt-10 bg-white/70 p-8 rounded-[40px] border border-3 border-solid border-[#fff]"
+        >
+            {
+                images.map((src, idx) => (
+                    <figure class="my-6">
+                        <img
+                            src={src}
+                            alt={`${current.label} - 第 ${idx + 1} 步`}
+                            class="m-auto w-[60%]"
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    </figure>
+                ))
+            }
+        </article>
+    </section>
+
+    <!-- h5 -->
+    <section class="lg:grid xl:hidden bg-[#eef2fe] pb-20 mt-8 overflow-hidden">
+        <nav class="flex bg-[#fff] py-3 items-center justify-center gap-4">
+            <a href="/zh/teach-yh/register" class="text-[#969696]"
+                >易换APP使用教程</a
+            >
+            <a href="/zh/teach-dx/download" class="text-[#969696]">德信教程</a>
+            <a
+                href={`${BASE_ROUTE}/${tabs[0].key}`}
+                href={hrefOf(tabs[0].key)}
+                class="text-[#141414] relative after:content-['']
+          after:h-1 after:w-18 after:block
+          after:absolute after:-bottom-3 after:bg-[#4385ed]
+          after:left-1/2 after:-translate-x-1/2 after:rounded-t-20"
+            >
+                MK教程
+            </a>
+        </nav>
+
+        <nav
+            data-tabs-nav
+            class="py-6 whitespace-nowrap flex flex-wrap justify-center overflow-x-auto scroll-smooth"
+            aria-label="教程导航"
+        >
+            {
+                tabs.map((t) => (
+                    <a
+                        data-key={t.key}
+                        title={t.label}
+                        href={`${BASE_ROUTE}/${t.key}`}
+                        class={`px-4 text-sm py-2 rounded-full shadow font-bold mr-2 inline-block
+              ${
+                  t.key === current.key
+                      ? "bg-[linear-gradient(127.31deg,#3feae4_-9.27%,#5383ff_95.74%)] text-white"
+                      : "bg-white text-[#6b7280]"
+              }`}
+                        aria-current={
+                            t.key === current.key ? "page" : undefined
+                        }
+                    >
+                        {t.label}
+                    </a>
+                ))
+            }
+        </nav>
+
+        <article class="mx-auto mt-6 bg-white/70 p-2 rounded-[40px] w-full">
+            {
+                images.map((src, idx) => (
+                    <figure class="my-4">
+                        <img
+                            class="m-auto w-[90%]"
+                            src={src}
+                            alt={`${current.label} - 第 ${idx + 1} 步`}
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    </figure>
+                ))
+            }
+        </article>
+    </section>
+
+    <script is:inline>
+        (function () {
+            function getTabKeyFromPath() {
+                const segs = location.pathname.split("/").filter(Boolean);
+                return segs[segs.length - 1];
+            }
+
+            function centerActive(nav) {
+                const tab = getTabKeyFromPath();
+                const active = nav.querySelector(
+                    'a[data-key="' + CSS.escape(tab) + '"]',
+                );
+                if (!active) return;
+
+                // 用 scrollLeft 方式更稳：不会被 sticky/overflow 的实现差异影响
+                const navRect = nav.getBoundingClientRect();
+                const aRect = active.getBoundingClientRect();
+                const delta =
+                    aRect.left +
+                    aRect.width / 2 -
+                    (navRect.left + navRect.width / 2);
+                nav.scrollLeft += delta;
+            }
+
+            const nav = document.querySelector("[data-tabs-nav]");
+            if (!nav) return;
+
+            // 首次进入（SSR 渲染后）
+            requestAnimationFrame(() =>
+                requestAnimationFrame(() => centerActive(nav)),
+            );
+
+            // 点击时也滚一下（即使最终是整页跳转，也能立即对齐）
+            nav.addEventListener(
+                "click",
+                function (e) {
+                    const a =
+                        e.target &&
+                        e.target.closest &&
+                        e.target.closest("a[data-key]");
+                    if (!a) return;
+                    requestAnimationFrame(() =>
+                        requestAnimationFrame(() => centerActive(nav)),
+                    );
+                },
+                { passive: true },
+            );
+        })();
+    </script>
+</BaseLayout>

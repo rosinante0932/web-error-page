@@ -1,9 +1,9 @@
 import encrypt from '../utils/encrypt'
 import { appVersion } from '@/constant/encrypt.constant'
 import { urlEncrypter } from '../utils/url-encrypt'
-import { PROD_SITE_URL,ENCRYPT } from 'astro:env/server'
+import { PROD_SITE_URL, ENCRYPT } from 'astro:env/server'
 
-console.log(ENCRYPT === 'false', '11222333')
+console.log(ENCRYPT, 'ENCRYPT')
 
 const TIMEOUT = 10000
 const isProd = process.env.ENV === 'prod'
@@ -27,12 +27,15 @@ async function buildConfig(input: RequestOptions) {
     }
 
     // 公共头
-    const deviceId = 'e54a603c5e2b29b4a8d20b2f6c51f6fd'
+    const deviceId = 'e1fe3465404ea37a0d2a8b537e12c7c1'
     config.headers.deviceId = deviceId
     config.headers['Content-Type'] = 'application/json'
-    config.headers['app-version'] = appVersion
-    config.headers['app-type'] = '20'
-    config.headers['easy-web-version'] = 'v02'
+    // config.headers['app-version'] = appVersion
+    // config.headers['app-type'] = '20'
+    config.headers['easy-web-version'] = 'v01'
+    config.headers['dt-encrypted'] = 'false'
+    config.headers['dt-nonce'] = encrypt.createNonce()
+    // config.headers['dt-timestamp'] = encrypt.createTimestamp()
 
     // userId（负时间戳，3天更新一次）
     let userId = 0
@@ -47,26 +50,27 @@ async function buildConfig(input: RequestOptions) {
         delete config.data.token
     }
 
-    // 组装请求体（未加密）
+    console.log(config.data, 'config.data --- config.data')
+
     config.data = {
         deviceId,
         param: config.data,
         notificationStatus: 0,
         timestamp: Date.now(),
+        osVersion: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
         deviceName: 'mobile',
         platform: 4,
+        screenSize: "{375, 2856}",
         lbs: '',
         network: -1,
         userId: parseInt(userId.toString(), 10),
         appType: 1,
     }
-    config.data.token = token
-    if (true) {
-        // 签名/加密相关头
-        config.headers['dt-nonce'] = encrypt.createNonce()
-        config.headers['dt-encrypted'] = 'false'
-        config.headers['dt-timestamp'] = encrypt.createTimestamp()
 
+    config.data.token = token
+
+    if (ENCRYPT === 'true') {
+        // 签名/加密相关头
         const encryptedPreview = encrypt.encrypt(config.data)
         config.headers['dt-sign'] = encrypt.createSign(
             encryptedPreview,
@@ -103,6 +107,7 @@ async function buildConfig(input: RequestOptions) {
             console.groupEnd()
         }
     }
+
     return config
 }
 
@@ -114,7 +119,7 @@ async function doFetch(config: any) {
         const res = await fetch(PROD_SITE_URL + config.url, {
             method: config.method,
             headers: config.headers,
-            body: config.body,
+            body: JSON.stringify(config.data),
             signal: controller.signal,
         })
 
@@ -127,7 +132,7 @@ async function doFetch(config: any) {
         // === 响应“拦截器”逻辑 ===
         // 加密响应：按你原逻辑判断（process.env.encrypt 为真 且 data 不是对象）
         let parsed: any = null
-        if (true) {
+        if (ENCRYPT === 'true') {
             // 解密 -> JSON
             try {
                 parsed = JSON.parse(encrypt.decrypt(rawText))
@@ -176,6 +181,7 @@ async function doFetch(config: any) {
         // 与原 axios 拦截器最终返回一致：直接返回 resData
         return resData
     } catch (error: any) {
+
         console.error('fetch error', error?.message || error)
         // 与原 axios 拦截器错误返回结构保持接近
         throw {

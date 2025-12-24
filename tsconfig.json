@@ -2,7 +2,9 @@
   "extends": "astro/tsconfigs/strict",
   "compilerOptions": {
     "moduleResolution": "node", // Windows 上建议用 node 而不是 bundler
-    "types": ["astro/client"],
+    "types": [
+      "astro/client"
+    ],
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -10,10 +12,19 @@
     "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "~/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "~/*": [
+        "./src/*"
+      ]
     },
     "resolveJsonModule": true
   },
-  "include": ["src/**/*", "src/**/*.vue", "src/**/*.ts", "src/**/*.tsx"]
+  "include": [
+    "src/**/*",
+    "src/**/*.vue",
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ]
 }

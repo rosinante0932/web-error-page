@@ -1,0 +1,543 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import "@/assets/css/initial.css";
+
+const title = "易换官网-易换业务范围";
+const referer = Astro.locals.referer;
+---
+
+<BaseLayout {title}>
+  <input type="hidden" value={referer} />
+  <!-- pc -->
+
+  <section
+    class="container lg:max-w-[1280px] mx-auto mt-[70px]
+    xs:hidden sm:hidden md:hidden lg:hidden xl:flex flex items-center justify-between gap-10 min-h-[350px]"
+  >
+    <h2 title="易换业务范围">
+      <img src="/assets/service/01.svg" class="ml-[-25px]" alt="易换业务范围" />
+    </h2>
+    <img
+      src="/assets/service/02.png"
+      alt=""
+      class="max-w-none absolute z-0 w-[792px] top-[0] right-[0px]"
+    />
+  </section>
+
+  <section
+    class="container relative z-1 lg:max-w-[1280px] mx-auto xs:hidden sm:hidden md:hidden lg:hidden xl:block gap-10 min-h-[308px] pb-[200px]"
+  >
+    <div class="grid grid-cols-2 gap-6">
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/001.svg)]"
+      >
+        <dt>
+          <h3 title="汇款服务" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]">汇款服务</span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="汇款服务"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title="提供国际汇款服务，允许用户从全球各地向其他国家
+              或地区进行资金转移。个人可以使用跨国汇款服务来
+              向其他国家的亲友或家庭成员发送资金，例如用于赡
+              养费用、教育支持或其他支出"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              提供国际汇款服务，允许用户从全球各地向其他国家<br />
+              或地区进行资金转移。个人可以使用跨国汇款服务来<br />
+              向其他国家的亲友或家庭成员发送资金，例如用于赡<br />
+              养费用、教育支持或其他支出。
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/002.svg)]"
+      >
+        <dt>
+          <h3 title="汇率实时查询" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]">汇率实时查询</span
+            >
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="汇率实时查询"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title=" 提供全球各种货币的实时汇率查询服务，方便用户对
+              于汇率的观察和把握"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              提供全球各种货币的实时汇率查询服务，方便用户对<br />
+              于汇率的观察和把握。
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/003.svg)]"
+      >
+        <dt>
+          <h3 title="外汇交易" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]">外汇交易</span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="外汇交易"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title="提供全球范围内的外汇买卖服务，包括现汇交易、远
+              期交易和即期点价等业务"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              提供全球范围内的外汇买卖服务，包括现汇交易、远<br />
+              期交易和即期点价等业务。<br />
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/004.svg)]"
+      >
+        <dt>
+          <h3 title="外籍工作者汇款" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]"
+              >外籍工作者汇款</span
+            >
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="外籍工作者汇款"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title="外籍工作者可以利用这种服务将赚取的资金汇回自己
+              的家乡或家人所在的国家"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              外籍工作者可以利用这种服务将赚取的资金汇回自己<br />
+              的家乡或家人所在的国家。<br />
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/005.svg)]"
+      >
+        <dt>
+          <h3 title="跨境支付" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]">跨境支付</span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="跨境支付"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title="为客户提供支持海外在线支付、商务支付等服务，以
+              简化跨境资金支付流程。企业可以使用跨国汇款服务
+              来支付供应商、合作伙伴或其他相关业务支出，用于
+              国际贸易和跨境业务。"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              为客户提供支持海外在线支付、商务支付等服务，以<br />
+              简化跨境资金支付流程。企业可以使用跨国汇款服务<br />
+              来支付供应商、合作伙伴或其他相关业务支出，用于<br />
+              国际贸易和跨境业务。
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/006.svg)]"
+      >
+        <dt>
+          <h3 title="跨境支付" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]"
+              >留学生资金支持</span
+            >
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="跨境支付"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title="留学生可以通过这种服务从家乡接收资金，或者向海
+              外支付学费和生活费用"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              留学生可以通过这种服务从家乡接收资金，或者向海<br />
+              外支付学费和生活费用。<br />
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/007.svg)]"
+      >
+        <dt>
+          <h3 title="货币兑换" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]">货币兑换</span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="货币兑换"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title="提供现金或电子货币的换取服务，包括现金兑换、外
+              币储蓄账户等。"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              提供现金或电子货币的换取服务，包括现金兑换、外<br />
+              币储蓄账户等。<br />
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/008.svg)]"
+      >
+        <dt>
+          <h3 title="全球送现金/送黄金业务" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]"
+              >全球送现金/送黄金业务</span
+            >
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="全球送现金/送黄金业务"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4 title="服务多个国家送现金业务，当天预约，次日送达">
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              服务多个国家送现金业务，当天预约，次日送达。<br />
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/009.svg)]"
+      >
+        <dt>
+          <h3 title="虚拟货币服务" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]">虚拟货币服务</span
+            >
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="虚拟货币服务"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title="此项服务通常关联到跨国交易、汇款等业务，用以支
+              持加密货币的交易和转账服务"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              此项服务通常关联到跨国交易、汇款等业务，用以支<br />
+              持加密货币的交易和转账服务。
+            </span>
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="p-[30px] px-[40px] rounded-[40px] border border-3
+         border-solid border-[#fff] bg-no-repeat bg-[#f7f9fb] bg-right bg-[url(/assets/service/0010.svg)]"
+      >
+        <dt>
+          <h3 title="个性化业务" class="relative pl-[10px]">
+            <span class="text-[28px] font-600 text-[#11254e]">个性化业务</span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-[10px] left-[2px]"
+              alt="个性化业务"
+            />
+          </h3>
+        </dt>
+        <dd class="mt-[14px]">
+          <h4
+            title="提供更为个性化的服务，根据客户需求，设定特定的
+              兑换方式和金额，可提供上门代收取款业务"
+          >
+            <span class="text-[16px] text-[#7281a2] leading-7">
+              提供更为个性化的服务，根据客户需求，设定特定的<br />
+              兑换方式和金额，可提供上门代收取款业务。
+            </span>
+          </h4>
+        </dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- h5 -->
+  <div class="lg:grid xl:hidden bg-[#eef2fe]">
+    <section class="mt-10 relative z-1">
+      <h2>
+        <img
+          class="mx-auto h-20"
+          src="/assets/service/m/01.svg"
+          alt="易换APP使用教程"
+        />
+      </h2>
+    </section>
+
+    <section class="-translate-y-35 relative z-0 h-43">
+      <img src="/assets/service/m/02.svg" alt="" />
+    </section>
+
+    <section class="pt-10 mx-2 relative z-0 pb-20">
+      <dl
+        class="p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >汇款服务</span
+            >
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="汇款服务"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            提供国际汇款服务，允许用户从全球各地向其他国家或地区进行资金转移。
+            个人可以使用跨国汇款服务来向其他国家的亲友或家庭成员发送资金，
+            例如用于赡养费用、教育支持或其他支出。
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="mt-4 p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >外汇交易</span
+            >
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="外汇交易"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            提供全球范围内的外汇买卖服务，包括现汇交易、远期交易和即期点价等业务。
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="mt-4 p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >跨境支付
+            </span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="跨境支付"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            为客户提供支持海外在线支付、商务支付等服务，以简化跨境资金支付流程。
+            企业可以使用跨国汇款服务来支付供应商、合作伙伴或其他相关业务支出，用于国际贸易和跨境业务。
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="mt-4 p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >货币兑换
+            </span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="货币兑换"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            提供现金或电子货币的换取服务，包括现金兑换、外币储蓄账户等。
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="mt-4 p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >虚拟货币服务
+            </span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="虚拟货币服务"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            此项服务通常关联到跨国交易、汇款等业务，用以支持加密货币的交易和转账服务。
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="mt-4 p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >汇率实时查询
+            </span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="汇率实时查询"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            提供全球各种货币的实时汇率查询服务，方便用户对于汇率的观察和把握。
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="mt-4 p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >外籍工作者汇款
+            </span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="外籍工作者汇款"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            外籍工作者可以利用这种服务将赚取的资金汇回自己的家乡或家人所在的国家。
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="mt-4 p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >留学生资金支持
+            </span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="留学生资金支持"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            留学生可以通过这种服务从家乡接收资金，或者向海外支付学费和生活费用。
+          </h4>
+        </dd>
+      </dl>
+
+      <dl
+        class="mt-4 p-6 rounded-[20px] border border-3 border-solid border-[#fff] bg-[rgba(255,255,255,0.7)]
+        shadow-[0_1.231vw_1.846vw_0_rgba(49,76,154,0.05)]"
+      >
+        <dt>
+          <h3 class="py-2 relative pl-2">
+            <span class="text-5 font-600 text-[#11254e] relative z-1"
+              >全球送现金/送黄金业务
+            </span>
+            <img
+              src="/assets/service/03.svg"
+              class="absolute top-1.5 left-0"
+              alt="全球送现金/送黄金业务"
+            />
+          </h3>
+        </dt>
+        <dd>
+          <h4 class="text-sm text-[#7281a2] leading-8">
+            服务多个国家送现金业务，当天预约，次日送达。
+          </h4>
+        </dd>
+      </dl>
+    </section>
+  </div>
+</BaseLayout>
