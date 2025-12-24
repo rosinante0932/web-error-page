@@ -119,7 +119,7 @@ async function doFetch(config: any) {
         const res = await fetch(PROD_SITE_URL + config.url, {
             method: config.method,
             headers: config.headers,
-            body: JSON.stringify(config.data),
+            body: typeof config.body === 'string' ? config.body : JSON.stringify(config.data),
             signal: controller.signal,
         })
 
