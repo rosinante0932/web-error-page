@@ -13,7 +13,7 @@
     "build:rc": "cross-env APP_ENV=rc astro build",
     "build:prod": "cross-env APP_ENV=prod astro build",
     "preview": "astro preview",
-    "start": "node ./dist/server/entry.mjs",
+    "start": "pm2-runtime start ecosystem.config.cjs",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -53,6 +53,7 @@
     "autoprefixer": "^10.4.21",
     "cross-env": "^10.0.0",
     "dotenv": "^17.2.1",
+    "pm2": "^6.0.14",
     "prettier": "^3.3.3",
     "typescript": "^5.5.4",
     "unocss": "^66.4.2",
