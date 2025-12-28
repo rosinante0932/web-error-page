@@ -3,7 +3,7 @@ import { appVersion } from '@/constant/encrypt.constant'
 import { urlEncrypter } from '../utils/url-encrypt'
 import { PROD_SITE_URL, ENCRYPT } from 'astro:env/server'
 
-console.log(ENCRYPT, 'ENCRYPT')
+// console.log(ENCRYPT, 'ENCRYPT')
 
 const TIMEOUT = 10000
 const isProd = process.env.ENV === 'prod'
@@ -50,7 +50,7 @@ async function buildConfig(input: RequestOptions) {
         delete config.data.token
     }
 
-    console.log(config.data, 'config.data --- config.data')
+    // console.log(config.data, 'config.data --- config.data')
 
     config.data = {
         deviceId,
@@ -103,7 +103,7 @@ async function buildConfig(input: RequestOptions) {
                 '%c请求拦截 (fetch)',
                 'padding: 2px;color: #CCCCCC;background: #003366;font-weight: bold;'
             )
-            console.log(originConfig)
+            // console.log(originConfig)
             console.groupEnd()
         }
     }
@@ -144,11 +144,11 @@ async function doFetch(config: any) {
             if (!isProd) {
                 console.groupCollapsed('%c响应拦截 (fetch - decrypt)', 'padding:2px;color:#fff;background:#000;font-weight:bold;')
                 try {
-                    console.log('url: ', urlEncrypter.decrypt(config.url))
+                    // console.log('url: ', urlEncrypter.decrypt(config.url))
                 } catch {
-                    console.log('url(dec-fail): ', config.url)
+                    // console.log('url(dec-fail): ', config.url)
                 }
-                console.log('data: ', parsed)
+                // console.log('data: ', parsed)
                 console.groupEnd()
             }
         } else {
@@ -175,7 +175,7 @@ async function doFetch(config: any) {
         }
 
         if (!isProd) {
-            console.log('service.fetch response OK:', resData)
+            // console.log('service.fetch response OK:', resData)
         }
 
         // 与原 axios 拦截器最终返回一致：直接返回 resData

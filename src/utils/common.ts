@@ -15,7 +15,7 @@ export const getIp = (ctx: APIContext) => {
     ctx.request.headers.get('cf-connecting-ip') ??
     'unknown';
 
-  console.log(ip)
+  // console.log(ip)
 
   ctx.locals.ip = ip;
   ctx.locals.local_ip = ip;

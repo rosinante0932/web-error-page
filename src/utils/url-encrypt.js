@@ -58,7 +58,7 @@ class UrlEncrypter {
       this.timeDiff = servTimestamp - this.now();
       this.alignTimeFlag = true;
     } catch (e) {
-      console.log("align server time error:", e);
+      // console.log("align server time error:", e);
     }
   }
 

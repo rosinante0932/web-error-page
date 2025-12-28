@@ -9,11 +9,11 @@ import { site_config } from './config/site.config.mjs'
 
 const APP_ENV = process.env.APP_ENV || 'dev'
 
-console.log(APP_ENV, '当前环境')
+// console.log(APP_ENV, '当前环境')
 
 const SITE_URL = process.env.SITE_URL || 'https://example.com'
 
-console.log(site_config(APP_ENV), '当前环境变量')
+// console.log(site_config(APP_ENV), '当前环境变量')
 const SRC = fileURLToPath(new URL('./src', import.meta.url))
 
 export default defineConfig({

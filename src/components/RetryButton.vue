@@ -17,7 +17,7 @@ onMounted(() => {
 
     const href = window.location.href;
 
-    console.log(href, 'href')
+    // console.log(href, 'href')
 
     const tag = '?site='
 
@@ -27,11 +27,11 @@ onMounted(() => {
 
     const newLinkOrigin = new URL(getLink);
 
-    console.log(newLinkOrigin, 'newLinkOrigin')
+    // console.log(newLinkOrigin, 'newLinkOrigin')
 
     const newLink = `${newLinkOrigin.origin}${newLinkOrigin.hash}`
 
-    console.log(newLink, 'newLink')
+    // console.log(newLink, 'newLink')
 
     link.value = newLink
 

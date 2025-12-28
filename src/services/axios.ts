@@ -88,7 +88,7 @@ service.interceptors.request.use(
       await urlEncrypter.encrypt(config)
     }
 
-    console.log(config.headers, 'config.headers=======')
+    // console.log(config.headers, 'config.headers=======')
 
     return config
   },

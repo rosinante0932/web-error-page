@@ -1,10 +1,10 @@
 import type { APIContext, MiddlewareNext } from 'astro'
 import { getIp } from './utils/common'
 export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
-    console.log(process.env.BOSS, '222')
+    // console.log(process.env.BOSS, '222')
     getIp(ctx)
 
-    console.log(ctx.request.headers, 'ctx.request.headers');
+    // console.log(ctx.request.headers, 'ctx.request.headers');
 
     const url = new URL(ctx.request.url)
 
@@ -23,11 +23,11 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
         return Response.redirect(new URL(`/zh${pathname}${url.search}`, url.origin), 302)
     }
 
-    console.log(url.search, 'url.search')
+    // console.log(url.search, 'url.search')
 
     if (url.searchParams.has('site')) {
         const siteValue = url.searchParams.get('site')
-        console.log('aaa的值=======:', siteValue) // 输
+        // console.log('aaa的值=======:', siteValue) // 输
         ctx.locals.referer = siteValue || ''
     }
 

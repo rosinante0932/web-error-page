@@ -129,7 +129,7 @@ class Encrypter {
     });
     const EC = elliptic.ec;
     const ec = new EC("secp256k1_dc");
-    console.log("------", process.env.APP_ENV);
+    // console.log("------", process.env.APP_ENV);
 
     // const publicKey = ['prod', 'rc'].includes(process.env.APP_ENV)
     const publicKey = true
