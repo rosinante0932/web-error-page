@@ -28,6 +28,7 @@
     "@types/vue": "^2.0.0",
     "@unocss/astro": "^66.5.12",
     "@unocss/reset": "^66.5.12",
+    "cross-env": "^10.1.0",
     "tailwind.css": "link:@unocss/reset/tailwind.css",
     "unocss": "^66.5.12",
     "unplugin-auto-import": "^20.3.0"
