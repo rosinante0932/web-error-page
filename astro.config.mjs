@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config'
 import vue from '@astrojs/vue'
 import sitemap from '@astrojs/sitemap'
-import UnoCSS from 'unocss/astro'
+// import UnoCSS from 'unocss/astro'
 import node from '@astrojs/node'
 import AutoImport from 'unplugin-auto-import/vite'
 import { fileURLToPath } from 'node:url'
@@ -30,9 +30,9 @@ export default defineConfig({
   }),
   integrations: [
     vue({ appEntrypoint: '/src/pages/_app.ts' }),
-    UnoCSS({
-      injectReset: true, //dark: 'class' 
-    }),
+    // UnoCSS({
+    //   injectReset: true, //dark: 'class' 
+    // }),
     sitemap({
       i18n: {
         defaultLocale: 'zh',
@@ -56,16 +56,16 @@ export default defineConfig({
       }
     },
     plugins: [
-      AutoImport({
-        // 这里既可以导入函数，也可以导入“type 类型”
-        imports: [
-          // 例：如果你也想自动引入 vue 的 ref、computed 等
-          'vue',
-          'pinia',
-        ],
-        dts: 'src/auto-imports.d.ts',         // 生成声明文件，给 TS 用
-        eslintrc: { enabled: true },          // 可选：生成 ESLint 配置，避免 “未定义” 报错
-      }),
+      // AutoImport({
+      //   // 这里既可以导入函数，也可以导入“type 类型”
+      //   imports: [
+      //     // 例：如果你也想自动引入 vue 的 ref、computed 等
+      //     'vue',
+      //     'pinia',
+      //   ],
+      //   dts: 'src/auto-imports.d.ts',         // 生成声明文件，给 TS 用
+      //   eslintrc: { enabled: true },          // 可选：生成 ESLint 配置，避免 “未定义” 报错
+      // }),
     ],
   }
 })
