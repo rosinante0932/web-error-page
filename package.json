@@ -12,8 +12,8 @@
     "build:rc": "cross-env APP_ENV=rc astro build",
     "build:prod": "cross-env APP_ENV=prod astro build",
     "preview": "astro preview",
-    "start": "cross-env NODE_OPTIONS='--max-old-space-size=1024 --expose-gc' node ./dist/server/entry.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "start": "cross-env NODE_OPTIONS='--max-old-space-size=1024 --expose-gc' pm2-runtime start ecosystem.config.cjs"
   },
   "dependencies": {
     "@astrojs/node": "^9.5.1",
@@ -28,6 +28,7 @@
     "@unocss/astro": "^66.5.12",
     "@unocss/reset": "^66.5.12",
     "cross-env": "^10.1.0",
+    "pm2": "^6.0.14",
     "tailwind.css": "link:@unocss/reset/tailwind.css",
     "unocss": "^66.5.12",
     "unplugin-auto-import": "^20.3.0"
