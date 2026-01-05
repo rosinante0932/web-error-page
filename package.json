@@ -3,10 +3,17 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "dev": "cross-env APP_ENV=dev astro dev",
+    "test": "cross-env APP_ENV=test astro dev",
+    "rc": "cross-env APP_ENV=rc astro dev",
+    "prod": "cross-env APP_ENV=prod astro dev",
+    "build:dev": "cross-env APP_ENV=dev astro build",
+    "build:test": "cross-env APP_ENV=test astro build",
+    "build:rc": "cross-env APP_ENV=rc astro build",
+    "build:prod": "cross-env APP_ENV=prod astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "start": "node ./dist/server/entry.mjs",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@astrojs/node": "^9.5.1",
