@@ -36,7 +36,7 @@ export const site_config = (env = "dev") => {
       PROD_SITE_URL: envField.string({
         context: "server",
         access: "secret",
-        default: "http://ec-app-gateway:8080",
+        default: "https://test-official-easy-change.dcops.cc/gw",
       }),
       DOCKER_PROXY_IP: envField.string({
         context: "server",

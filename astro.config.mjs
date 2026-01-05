@@ -62,15 +62,6 @@ export default defineConfig({
           // 例：如果你也想自动引入 vue 的 ref、computed 等
           'vue',
           'pinia',
-          {
-            '@tanstack/vue-query': [
-              'useQuery',
-              'useMutation',
-              'useQueryClient',
-              'QueryClient',
-              'VueQueryPlugin',
-            ],
-          },
         ],
         dts: 'src/auto-imports.d.ts',         // 生成声明文件，给 TS 用
         eslintrc: { enabled: true },          // 可选：生成 ESLint 配置，避免 “未定义” 报错

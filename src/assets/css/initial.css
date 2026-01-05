@@ -1,7 +1,0 @@
-.test {
-  appearance: none;
-  user-select: none;
-  display: inline-flex;
-  justify-content: center;
-  background-image: linear-gradient(to right, #339dff, #1649ff) !important;
-}
