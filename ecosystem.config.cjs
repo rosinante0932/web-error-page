@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "astro-app",
+      name: "web-error-page-app",
       cwd: "./",
       script: "./dist/server/entry.mjs",
       interpreter: "node",
@@ -10,7 +10,6 @@ module.exports = {
         NODE_ENV: "production",
         APP_ENV: "prod",
       },
-      // 日志走 docker logs
       out_file: "/dev/stdout",
       error_file: "/dev/stderr",
       merge_logs: true,

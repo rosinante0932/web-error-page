@@ -7,8 +7,6 @@ import { site_config } from './config/site.config.mjs'
 
 const APP_ENV = process.env.APP_ENV || 'dev'
 
-console.log(APP_ENV, '当前环境')
-
 const SITE_URL = process.env.SITE_URL || 'https://example.com'
 
 console.log(site_config(APP_ENV), '当前环境变量')
@@ -39,8 +37,8 @@ export default defineConfig({
     locales: ['zh', 'en', 'th', 'km', 'ko', 'vi'],
     defaultLocale: 'zh',
     routing: {
-      strategy: 'pathname',        // ✅ 改为 pathname
-      prefixDefaultLocale: true    // ✅ /zh/... 也有前缀，与你的目录结构一致
+      strategy: 'pathname',       
+      prefixDefaultLocale: true  
     }
   },
   vite: {
@@ -52,5 +50,11 @@ export default defineConfig({
     },
     plugins: [
     ],
+    build: {
+      commonjsOptions: { transformMixedEsModules: true }
+    },
+    ssr: {
+      noExternal: ['@unocss/reset', 'vue']
+    }
   }
 })
