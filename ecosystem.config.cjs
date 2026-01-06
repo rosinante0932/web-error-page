@@ -6,6 +6,7 @@ module.exports = {
       script: "./dist/server/entry.mjs",
       interpreter: "node",
       instances: 'max',
+      max_memory_restart: '500M',
       env: {
         NODE_ENV: "production",
         APP_ENV: "prod",

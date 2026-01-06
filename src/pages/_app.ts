@@ -1,19 +1,19 @@
-export default () => {
-}
+import cron from 'node-cron';
 
-// if (import.meta.env.SSR) {
-//   setInterval(() => {
-//     // 如果启动脚本里带了 --expose-gc，这里可以手动触发
-//     if (global.gc) {
-//       console.log('[mem] 正在手动触发 GC...');
-//       global.gc();
-//     }
+let isGcTaskStarted = false;
+
+export default () => {
+  if (!isGcTaskStarted && import.meta.env.SSR) {
+    isGcTaskStarted = true;
+
+    // 使用 cron 表达式，例如每 30 分钟执行一次：'*/30 * * * *'
+    cron.schedule('*/30 * * * *', () => {
+      if (global.gc) {
+        console.log('[Runtime] Running scheduled GC via Cron...', new Date().toLocaleString());
+        global.gc();
+      }
+    });
     
-//     const m = process.memoryUsage();
-//     console.log('[mem]', {
-//       rss: Math.round(m.rss / 1024 / 1024) + 'MB',
-//       heapUsed: Math.round(m.heapUsed / 1024 / 1024) + 'MB',
-//       // ... 其他字段
-//     });
-//   }, 30_000).unref?.();
-// }
+    console.log('[Runtime] GC Cron Task Scheduled');
+  }
+}
