@@ -2,7 +2,6 @@ import { defineConfig } from 'astro/config'
 import vue from '@astrojs/vue'
 import sitemap from '@astrojs/sitemap'
 import node from '@astrojs/node'
-import AutoImport from 'unplugin-auto-import/vite'
 import { fileURLToPath } from 'node:url'
 import { site_config } from './config/site.config.mjs'
 
