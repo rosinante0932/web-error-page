@@ -13,7 +13,7 @@
     "build:prod": "cross-env APP_ENV=prod astro build",
     "preview": "astro preview",
     "format": "prettier --write .",
-    "a:test": "npx autocannon http://127.0.0.1:4321/zh -c 1000 -d 60",
+    "a:test": "npx autocannon https://easychange-web-error-page.change-easy-v1.com/zh/ -c 10 -d 600",
     "start": "cross-env NODE_OPTIONS='--max-old-space-size=512 --expose-gc' pm2-runtime start ecosystem.config.cjs"
   },
   "dependencies": {
