@@ -16,13 +16,13 @@ const link = ref("");
 onMounted(() => {
   const href = window.location.href;
 
-  console.log(href, "href");
+  // console.log(href, "href");
 
   const tag = "?site=";
 
   const tagIndex = href.indexOf(tag);
 
-  console.log(tagIndex, "tagIndex");
+  // console.log(tagIndex, "tagIndex");
 
   if (tagIndex === -1) {
     return;
@@ -32,7 +32,7 @@ onMounted(() => {
 
   const newLinkOrigin = new URL(getLink);
 
-  console.log(newLinkOrigin, "newLinkOrigin");
+  // console.log(newLinkOrigin, "newLinkOrigin");
 
   let newLink = "";
   if (newLinkOrigin.hash) {
@@ -43,7 +43,7 @@ onMounted(() => {
     newLink = `${newLinkOrigin.origin}`;
   }
 
-  console.log(newLink, "newLink");
+  // console.log(newLink, "newLink");
 
   link.value = newLink;
 });

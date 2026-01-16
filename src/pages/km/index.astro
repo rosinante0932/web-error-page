@@ -1,41 +1,18 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { DOCKER_PROXY_IP } from "astro:env/server";
-import { HttpsProxyAgent } from "https-proxy-agent";
-import axios from "axios";
 import { highlightPlaceholders } from "@/utils/common";
 import API from "@/api/index.js";
 import { t, resolveLocale, type Locale } from "@/lib/i18n";
 import ForbiddenImage from "@/components/Forbidden.vue";
-import nodeFetch from "@/services/service.node-fetch";
-import undiciService from "@/services/service.undici";
-import gotService from "@/services/service.got";
-import superagentService from "@/services/service.superagent";
-import service from "@/services/service.astro-fetch";
-import Httpservice from "@/services/service.http";
 import "@/assets/css/initial.css";
 import RetryButton from "@/components/RetryButton.vue";
-
-const proxy = DOCKER_PROXY_IP; // 你的代理地址
-
-const agent = new HttpsProxyAgent(proxy);
-
-const dockerNetAgentOptions =
-  // DOCKER_PROXY_NET 让运维加到docker-compose的环境变量里面了，所以本地没有
-  process.env.DOCKER_PROXY_NET === "true"
-    ? {
-        httpsAgent: agent,
-        httpAgent: agent,
-        timeout: 8000,
-      }
-    : {};
 
 const locale: Locale = resolveLocale(Astro.currentLocale);
 const title = t(locale, "访问受限制");
 const referer = Astro.locals.referer;
 
 let posts = {
-  ip: "192.168.0.1",
+  ip: "",
   referer,
   country: "",
   city: "",
@@ -45,9 +22,6 @@ let posts = {
   custom_ip: Astro.locals.clientIP,
 };
 
-console.log(Astro.locals.clientIP, "客户端ip");
-
-console.log(process.env.DOCKER_PROXY_NET, "==================DOCKER_PROXY_NET");
 
 const restrictionHtml = highlightPlaceholders(
   t(
@@ -55,20 +29,6 @@ const restrictionHtml = highlightPlaceholders(
     "您所在的地区已被禁止访问我们的网站，给您造成的不便，敬请见谅。如有任何疑问，请联系24小时在线客服，我们将竭诚为您服务。"
   )
 );
-
-// try {
-//   const res = await undiciService.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res---0");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---0");
-// }
 
 try {
   const res = await API.getKvConfig(
@@ -83,98 +43,14 @@ try {
     }
   );
 
-  console.log(" Astro.locals.local_ip", Astro.locals.local_ip);
-
-  posts = {
-    ...posts,
-    ...res.data,
-  };
-
-  console.log(res.data, "正确获取归属地的 ---1");
-
-  console.log(res, "res---1");
+ if (res && res.data) {
+    posts = {
+      ...posts,
+      ...res.data,
+    };
+  }
 } catch (error) {
-  console.log(error, "--报错获取归属地的---1");
-}
-
-// try {
-//   const res = await gotService.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   console.log(res.data, "正确获取归属地的---3");
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res----");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---3");
-// }
-
-// try {
-//   const res = await superagentService.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   console.log(res.data, "正确获取归属地的---4");
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res----4");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---4");
-// }
-
-// try {
-//   const res = await service.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   console.log(res.data, "正确获取归属地的---5");
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res----5");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---5");
-// }
-
-// try {
-//   const res = await Httpservice.post("/common/kv/config", {
-//     k: "official.chat.web.url.text",
-//   });
-
-//   console.log(res.data, "正确获取归属地的---6");
-
-//   posts = {
-//     ...posts,
-//     ...res.data,
-//   };
-//   console.log(res, "res----");
-// } catch (error) {
-//   console.log(error, "--报错获取归属地的---6");
-// }
-
-try {
-  const res = await axios.get("https://api.ipify.org", {
-    ...dockerNetAgentOptions,
-    timeout: 8000,
-  });
-
-  console.log(res.data, "服务器ip");
-
-  posts = {
-    ...posts,
-    ip: res.data,
-  };
-} catch (error) {
-  console.log(error, "ip 获取错误");
+  console.error("API获取配置失败, 使用默认配置:", error);
 }
 ---
 
@@ -190,6 +66,7 @@ try {
   <input type="hidden" value={`客服链接: ${posts.value}`} />
   <input type="hidden" value={`国家: ${posts.country}`} />
   <input type="hidden" value={`城市: ${posts.city}`} />
+  <input type="hidden" value={`预发yu`} />
   <!-- pc -->
 
   <div

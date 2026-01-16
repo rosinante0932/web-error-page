@@ -6,38 +6,13 @@ import VConsole from "../components/VConsole.astro";
 import '~/assets/css/base.css';
 const locale: Locale = resolveLocale(Astro.currentLocale);
 const { title, description } = Astro.props;
-const url = new URL(Astro.url);
 const search = Astro.url.search;
-console.log(Astro.url.search, "========search");
-console.log(Astro.url, "==========Astro.url");
-console.log(url, "==============url");
 ---
 
 <html lang={Astro.currentLocale} class="h-[100%]">
   <head>
     <BaseHead {title} {description} />
     <!-- 先执行首帧主题脚本 -->
-    <script is:inline>
-      (() => {
-        try {
-          const raw = localStorage.getItem("ui"); // ⬅️ 确保与 pinia 持久化的 key 一致
-          const sel = raw ? JSON.parse(raw).theme : "system";
-          const prefersDark = window.matchMedia?.(
-            "(prefers-color-scheme: dark)"
-          ).matches;
-          const actual =
-            sel === "dark"
-              ? "dark"
-              : sel === "light"
-                ? "light"
-                : prefersDark
-                  ? "dark"
-                  : "light";
-          if (actual === "dark") document.documentElement.classList.add("dark");
-          document.documentElement.dataset.theme = actual;
-        } catch {}
-      })();
-    </script>
   </head>
   <body
     class="safearea-h h-[100%] font-sans antialiased text-gray-800 xl:bg-[url('~/assets/svg/bg.svg')] bg-cover bg-center bg-no-repeat"

@@ -1,84 +1,53 @@
-import type { APIContext, MiddlewareNext } from 'astro'
-import { getIp } from './utils/common'
+import type { APIContext, MiddlewareNext } from 'astro';
+import { getIp } from './utils/common';
+
+const SUPPORTED_LOCALES = ['zh', 'en', 'ko', 'th', 'vi', 'km'] as const;
+const DEFAULT_LOCALE = 'zh';
+
+function getPreferredLanguage(headers: Headers): string {
+    const acceptLanguage = headers.get('Accept-Language');
+    if (!acceptLanguage) return DEFAULT_LOCALE;
+
+    for (const locale of SUPPORTED_LOCALES) {
+        if (acceptLanguage.includes(locale)) {
+            return locale;
+        }
+    }
+    return DEFAULT_LOCALE;
+}
+
 export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
-    console.log(process.env.BOSS, '222')
-    getIp(ctx)
+    const url = new URL(ctx.request.url);
+    const { pathname, search } = url;
 
-    // const referer =
-    //     ctx.request.headers.get('Referer') || // 正确拼写
-    //     ctx.request.headers.get('Referrer') || // 少数代理会用这个
-    //     '';
-
-    // const ref = ctx.request.headers.get('referer') || '';
-    // const u = new URL(ref);
-    // const origin = u.origin;   // https://example.com
-    // const path = u.pathname; // 跨域通常是 '/'
-
-    // const ref1 = ctx.request.headers.get('Referer')
-
-    // console.log(ctx.request.headers, 'ctx.request')
-
-    // console.log(ref1, 'ref1')
-
-    // console.log(ref, 'ref')
-
-    // console.log(origin, 'origin')
-
-    // console.log(path, 'path1')
-
-    // console.log(referer, 'referer')
-
-    console.log(ctx.request.headers, 'ctx.request.headers');
-
-    // ctx.locals.referer = referer
-
-    const url = new URL(ctx.request.url)
-
-    const pathname = url.pathname
-
-    // 定义支持的语言
-    const supportedLocales = ['zh', 'en', 'ko', 'th', 'vi', 'km'] // 根据你的需求修改
-
-    // 检查路径是否已经包含语言前缀
-    const hasLocale = supportedLocales.some(locale =>
-        pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
-    )
-
-    // 如果没有语言前缀，重定向到默认语言
-    if (!hasLocale && pathname !== '/') {
-        return Response.redirect(new URL(`/zh${pathname}${url.search}`, url.origin), 302)
+    if (pathname.startsWith('/_astro') || pathname.includes('.')) {
+        return next();
     }
 
-    console.log(url.search, 'url.search')
-
-    if (url.searchParams.has('site')) {
-        const siteValue = url.searchParams.get('site')
-        console.log('aaa的值=======:', siteValue) // 输
-        ctx.locals.referer = siteValue || ''
+    try {
+        getIp(ctx);
+    } catch (e) {
+        console.error("Middleware getIp Error:", '就是错了');
+        ctx.locals.clientIP = '0.0.0.0';
     }
 
-    // 根路径重定向到默认语言
+    const currentLocale = SUPPORTED_LOCALES.find(
+        locale => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+    );
+
+    const siteParam = url.searchParams.get('site');
+    if (siteParam) {
+        ctx.locals.referer = siteParam;
+    }
+
     if (pathname === '/') {
-        // 可以根据 Accept-Language 头或用户偏好来决定默认语言
-        const defaultLang = getPreferredLanguage(ctx) || 'zh'
-        return Response.redirect(new URL(`/${defaultLang}/${url.search}`, url.origin), 302)
+        const defaultLang = getPreferredLanguage(ctx.request.headers);
+        return Response.redirect(new URL(`/${defaultLang}${search}`, url.origin), 302);
     }
 
-    // 获取用户偏好语言的函数
-    function getPreferredLanguage(ctx: APIContext) {
-        const acceptLanguage = ctx.request.headers.get('Accept-Language')
-        if (!acceptLanguage) return 'zh'
-
-        // 简单的语言检测
-        if (acceptLanguage.includes('zh')) return 'zh'
-        if (acceptLanguage.includes('en')) return 'en'
-        if (acceptLanguage.includes('km')) return 'km'
-        if (acceptLanguage.includes('ko')) return 'ko'
-        if (acceptLanguage.includes('th')) return 'th'
-        if (acceptLanguage.includes('vi')) return 'vi'
-
-        return 'zh' // 默认中文
+    if (!currentLocale) {
+        return Response.redirect(new URL(`/${DEFAULT_LOCALE}${pathname}${search}`, url.origin), 302);
     }
 
-    return next()
+    return next();
 }

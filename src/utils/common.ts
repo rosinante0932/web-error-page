@@ -1,5 +1,8 @@
 import type { APIContext } from "astro"
 import DOMPurify from "isomorphic-dompurify";
+// import { getLogger } from "./logger-singleton";
+
+// const logger = getLogger(); // 不会每次 new
 
 export const isClient = typeof window !== 'undefined'
 
@@ -14,11 +17,15 @@ export const getIp = (ctx: APIContext) => {
     ctx.request.headers.get('x-real-ip') ??
     ctx.request.headers.get('cf-connecting-ip') ??
     'unknown';
-
-  console.log(ip)
-
-  ctx.locals.ip = ip;
-  ctx.locals.local_ip = ip;
+  try {
+    ctx.locals.ip = ip;
+    ctx.locals.local_ip = ip;
+  } catch {
+    console.error("--- 错了")
+  } finally {
+    ctx.locals.ip = ip;
+    ctx.locals.local_ip = ip;
+  }
 }
 
 /**
