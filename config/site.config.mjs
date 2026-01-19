@@ -53,6 +53,24 @@ export const site_config = (env = "dev") => {
         access: "secret",
         default: "false",
       }),
+
+      LOG_BASE_DIR: envField.string({
+        context: "server",
+        access: "secret",
+        default: "/logs",
+      }),
+
+      LOG_LEVEL: envField.string({
+        context: "server",
+        access: "secret",
+        default: "info",
+      }),
+
+      LOG_TO_STDOUT: envField.string({
+        context: "server",
+        access: "secret",
+        default: "true",
+      }),
     },
     rc: {
       BOSS: envField.string({
@@ -105,6 +123,23 @@ export const site_config = (env = "dev") => {
         access: "secret",
         default: "true",
       }),
+      LOG_BASE_DIR: envField.string({
+        context: "server",
+        access: "secret",
+        default: "/logs",
+      }),
+
+      LOG_LEVEL: envField.string({
+        context: "server",
+        access: "secret",
+        default: "info",
+      }),
+
+      LOG_TO_STDOUT: envField.string({
+        context: "server",
+        access: "secret",
+        default: "true",
+      }),
     },
     prod: {
       BOSS: envField.string({
@@ -153,6 +188,24 @@ export const site_config = (env = "dev") => {
         default: "gw",
       }),
       ENCRYPT: envField.string({
+        context: "server",
+        access: "secret",
+        default: "true",
+      }),
+      
+      LOG_BASE_DIR: envField.string({
+        context: "server",
+        access: "secret",
+        default: "/logs",
+      }),
+
+      LOG_LEVEL: envField.string({
+        context: "server",
+        access: "secret",
+        default: "info",
+      }),
+
+      LOG_TO_STDOUT: envField.string({
         context: "server",
         access: "secret",
         default: "true",

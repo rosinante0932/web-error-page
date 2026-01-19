@@ -79,3 +79,5 @@ auto-imports.d.ts
 dist
 
 .vercel
+
+logs

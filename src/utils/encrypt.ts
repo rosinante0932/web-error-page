@@ -106,7 +106,7 @@ function getEC() {
 }
 
 export function createEncrypter(opts: { serverPublicKeyBase64: string; defaultSignKeyBase64: string }) {
-  const ec = getEC();
+  const ec:any = getEC();
   
   const serverKey = ec.keyFromPublic(Buffer.from(opts.serverPublicKeyBase64, "base64").toString("hex"), "hex");
   const clientKey = ec.genKeyPair();

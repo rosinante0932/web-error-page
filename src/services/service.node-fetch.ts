@@ -2,6 +2,7 @@ import { encrypter } from '../utils/encrypterSingleton'
 import { appVersion } from '@/constant/encrypt.constant'
 import { urlEncrypter } from '../utils/url-encrypt'
 import { PROD_SITE_URL, ENCRYPT } from 'astro:env/server'
+import { logger } from '@/lib/log'
 
 const TIMEOUT = 10_000;
 const MAX_RESPONSE_SIZE = 1_024 * 1024;
@@ -43,7 +44,7 @@ async function readTextWithLimit(res: Response, maxChars = MAX_RESPONSE_SIZE) {
 
 async function buildConfig(input: any) {
     const method = (input.method || 'POST').toUpperCase();
-    
+
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'deviceId': 'e54a603c5e2b29b4a8d20b2f6c51f6fd',
@@ -100,13 +101,20 @@ async function buildConfig(input: any) {
 
     const config = { url: input.url, method, headers, body: finalBody };
     if (shouldEncrypt) await urlEncrypter.encrypt(config);
-    
+
     return config;
 }
 
 async function doFetch(config: any) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
+    const started = Date.now();
+    const traceId = config.traceId;
+
+    logger.info(
+        { traceId, url: config.url, method: config.method },
+        'api_request_start'
+    );
 
     try {
         const fetchUrl = PROD_SITE_URL + config.url;
@@ -115,7 +123,7 @@ async function doFetch(config: any) {
             headers: config.headers,
             body: config.body,
             signal: controller.signal,
-            keepalive: true 
+            keepalive: true
         });
 
         const rawText = await readTextWithLimit(res);
@@ -127,19 +135,43 @@ async function doFetch(config: any) {
             throw new Error(`JSON Parse/Decrypt Failed: ${String(e)}`);
         }
 
-        if (data?.code === 4002) return null;
+        if (data?.code === 4002) {
+            logger.warn({ traceId, url: config.url, ms: Date.now() - started }, 'api_auth_expired_4002');
+            return null;
+        }
 
         if (!res.ok || (data?.code !== 200 && data?.code !== 2000)) {
-            throw new Error(data?.msg || data?.message || `HTTP ${res.status}`);
+            const msg = data?.msg || data?.message || `HTTP ${res.status}`;
+            const e = new Error(msg);
+            (e as any).httpStatus = res.status;
+            (e as any).bizCode = data?.code;
+            throw e;
         }
+
+        logger.info(
+            { traceId, url: config.url, ms: Date.now() - started, code: data?.code },
+            'api_request_ok'
+        );
 
         return data;
     } catch (err: any) {
-        const isTimeout = err.name === 'AbortError';
-        throw {
-            code: isTimeout ? 408 : (err.code || 500),
-            message: isTimeout ? 'Request Timeout' : err.message,
-        };
+        const isTimeout = err?.name === 'AbortError';
+
+        logger[isTimeout ? 'warn' : 'error'](
+            {
+                traceId,
+                url: config.url,
+                ms: Date.now() - started,
+                err: isTimeout ? 'timeout' : err?.message
+            },
+            isTimeout ? 'api_request_timeout' : 'api_request_failed'
+        );
+
+        const e = new Error(isTimeout ? 'Request Timeout' : String(err?.message || err));
+        (e as any).code = isTimeout ? 408 : (err?.code || 500);
+        (e as any).httpStatus = err?.httpStatus;
+        (e as any).bizCode = err?.bizCode;
+        throw e;
     } finally {
         clearTimeout(timeoutId);
     }
@@ -147,7 +179,8 @@ async function doFetch(config: any) {
 
 const service = {
     async request<T = any>(opts: any): Promise<T> {
-        const config = await buildConfig(opts);
+        const config = await buildConfig(opts) as any;
+        config.traceId = opts.traceId; // ⭐ 关键
         return doFetch(config);
     },
     get<T = any>(url: string, opts = {}) { return this.request<T>({ url, method: 'GET', ...opts }); },
