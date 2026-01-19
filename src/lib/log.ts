@@ -1,4 +1,4 @@
-import { LOG_BASE_DIR, LOG_LEVEL, LOG_TO_STDOUT } from "astro:env/server";
+import { LOG_LEVEL, LOG_TO_STDOUT } from "astro:env/server";
 import fs from "node:fs";
 import path from "node:path";
 import pino, { destination, type StreamEntry } from "pino";
@@ -12,15 +12,6 @@ const PROJECT_ROOT = process.cwd();
 
 const POD = process.env.POD_NAME || `local-${process.pid}`;
 
-function ensureWritableDir(dir: string) {
-  try {
-    fs.mkdirSync(dir, { recursive: true });
-    fs.accessSync(dir, fs.constants.W_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
 const LOG_BASE = path.join(PROJECT_ROOT, "logs");
 
 let LOG_DIR = path.join(LOG_BASE, POD);
