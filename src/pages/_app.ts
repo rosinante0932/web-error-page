@@ -1,18 +1,48 @@
+import { logger } from "@/lib/log";
+
 let isGcTaskStarted = false;
 
 export default () => {
-  if (!isGcTaskStarted && import.meta.env.SSR) {
-    isGcTaskStarted = true;
+  if (!import.meta.env.SSR) return;
 
-    // 使用 cron 表达式，例如每 30 分钟执行一次：'*/30 * * * *'
-    import('node-cron').then((cron) => {
-      cron.default.schedule('*/30 * * * *', () => {
-        if (global.gc) {
-          global.gc();
+  if (isGcTaskStarted) {
+    logger.debug("[GC] GC cron already started, skip");
+    return;
+  }
+
+  isGcTaskStarted = true;
+
+  import("node-cron")
+    .then((cron) => {
+      cron.default.schedule("*/30 * * * *", () => {
+        if (typeof global.gc === "function") {
+          try {
+            global.gc();
+            logger.debug({ pid: process.pid }, "[GC] manual gc triggered");
+          } catch (e) {
+            logger.warn({ err: e }, "[GC] manual gc failed");
+          }
+        } else {
+          // 只有第一次提示即可，避免刷日志
+          logger.warn(
+            { pid: process.pid },
+            "[GC] global.gc not available (Node not started with --expose-gc)"
+          );
         }
       });
-    });
 
-    console.log('[Runtime] GC Cron Task Scheduled');
-  }
-}
+      logger.info(
+        {
+          pid: process.pid,
+          schedule: "*/30 * * * *",
+        },
+        "[GC] GC cron task scheduled"
+      );
+    })
+    .catch((err) => {
+      logger.error(
+        { err },
+        "[GC] failed to load node-cron, GC task not scheduled"
+      );
+    });
+};
