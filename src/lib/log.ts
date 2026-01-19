@@ -21,10 +21,7 @@ function ensureWritableDir(dir: string) {
     return false;
   }
 }
-
-// ✅ 默认就是项目根 logs；只有你显式配置 LOG_BASE_DIR 才会去别的地方
-const preferredBase = String(LOG_BASE_DIR || "").trim() || path.join(PROJECT_ROOT, "logs");
-const LOG_BASE = ensureWritableDir(preferredBase) ? preferredBase : path.join(PROJECT_ROOT, "logs");
+const LOG_BASE = path.join(PROJECT_ROOT, "logs");
 
 let LOG_DIR = path.join(LOG_BASE, POD);
 fs.mkdirSync(LOG_DIR, { recursive: true });
