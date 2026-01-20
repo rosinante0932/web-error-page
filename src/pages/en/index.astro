@@ -7,10 +7,24 @@ import ForbiddenImage from "@/components/Forbidden.vue";
 import "@/assets/css/initial.css";
 import RetryButton from "@/components/RetryButton.vue";
 import { fetchWithCache } from "@/lib/cache";
+import { logger } from "@/lib/log";
 
 const locale: Locale = resolveLocale(Astro.currentLocale);
 const title = t(locale, "访问受限制");
 const referer = Astro.locals.referer;
+
+const localIp = String(Astro.locals.local_ip || Astro.locals.clientIP || "");
+
+logger.info(
+  {
+    route: Astro.url.pathname,
+    referer,
+    ip: Astro.locals.clientIP,
+    local_ip: localIp,
+    locale,
+  },
+  "403 page render"
+);
 
 let posts = {
   ip: "",
@@ -24,10 +38,7 @@ let posts = {
 };
 
 const restrictionHtml = highlightPlaceholders(
-  t(
-    locale,
-    "您所在的地区已被禁止访问我们的网站，给您造成的不便，敬请见谅。如有任何疑问，请联系24小时在线客服，我们将竭诚为您服务。",
-  ),
+  t(locale, "您所在的地区已被禁止访问我们的网站，给您造成的不便，敬请见谅。如有任何疑问，请联系24小时在线客服，我们将竭诚为您服务。"),
 );
 
 try {
@@ -36,24 +47,19 @@ try {
     () =>
       API.getKvConfig(
         { k: "official.chat.web.url.text" },
-        {
-          headers: {
-            "x-forwarded-for": Astro.locals.local_ip,
-            "x-real-ip": Astro.locals.local_ip,
-          },
-        },
+        { headers: { "x-forwarded-for": localIp, "x-real-ip": localIp } },
       ),
-    60000, // 缓存 60 秒
+    60000,
   );
 
-  if (res && res.data) {
-    posts = {
-      ...posts,
-      ...res.data,
-    };
-  }
+  logger.info(
+    { k: "official.chat.web.url.text", hasData: !!res?.data, hasValue: !!res?.data?.value },
+    "kv_config_ok",
+  );
+
+  if (res?.data) posts = { ...posts, ...res.data };
 } catch (error) {
-  console.error("API获取配置失败, 使用默认配置:", error);
+  logger.error({ err: error }, "kv_config_failed");
 }
 ---
 
@@ -69,7 +75,7 @@ try {
   <input type="hidden" value={`客服链接: ${posts.value}`} />
   <input type="hidden" value={`国家: ${posts.country}`} />
   <input type="hidden" value={`城市: ${posts.city}`} />
-  <input type="hidden" value={`预发yu`} />
+  <input type="hidden" value={`预发`} />
   <!-- pc -->
 
   <div
