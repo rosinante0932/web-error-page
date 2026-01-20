@@ -1,6 +1,7 @@
 import { LOG_LEVEL, LOG_TO_STDOUT } from "astro:env/server";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import pino, { destination, type StreamEntry } from "pino";
 import FileStreamRotator from "file-stream-rotator";
 
@@ -8,11 +9,29 @@ function isTrue(v?: string) {
   return String(v ?? "").trim().toLowerCase() === "true";
 }
 
-const PROJECT_ROOT = process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const APP_DIR = path.resolve(__dirname);
+const APP_ROOT = process.env.APP_ROOT ? path.resolve(process.env.APP_ROOT) : APP_DIR;
 
-const POD = process.env.POD_NAME || `local-${process.pid}`;
+const POD = process.env.POD_NAME || process.env.HOSTNAME || 'local';
+const LOCAL_FALLBACK_BASE = path.join(APP_ROOT, 'logs');
 
-const LOG_BASE = path.join(PROJECT_ROOT, "logs");
+function ensureWritableDir(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.accessSync(dir, fs.constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const wantBase = '/logs';
+const LOG_BASE = ensureWritableDir(wantBase) ? wantBase : LOCAL_FALLBACK_BASE;
+if (LOG_BASE !== wantBase) {
+  console.log(`[LOG] cannot use "${wantBase}" -> fallback "${LOG_BASE}"`);
+}
 
 let LOG_DIR = path.join(LOG_BASE, POD);
 fs.mkdirSync(LOG_DIR, { recursive: true });
