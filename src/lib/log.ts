@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pino, { destination, type StreamEntry } from "pino";
 import FileStreamRotator from "file-stream-rotator";
+import { createTelegramStream } from "@/lib/tg";
 
 function isTrue(v?: string) {
   return String(v ?? "").trim().toLowerCase() === "true";
@@ -50,6 +51,9 @@ const fileStream = FileStreamRotator.getStream({
 
 const streams: StreamEntry[] = [{ stream: fileStream }];
 if (isTrue(LOG_TO_STDOUT)) streams.push({ stream: destination(1) });
+
+// ✅ 这一行就是加入 TG（warn 以上）
+streams.push({ level: "warn", stream: createTelegramStream() });
 
 export const logger = pino(
   { level: String(LOG_LEVEL || "info").toLowerCase(), base: { pod: POD } },
