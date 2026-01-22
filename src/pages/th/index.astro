@@ -7,7 +7,6 @@ import ForbiddenImage from "@/components/Forbidden.vue";
 import "@/assets/css/initial.css";
 import RetryButton from "@/components/RetryButton.vue";
 import { fetchWithCache } from "@/lib/cache";
-import { logger } from "@/lib/log";
 
 const locale: Locale = resolveLocale(Astro.currentLocale);
 const title = t(locale, "访问受限制");
@@ -15,7 +14,7 @@ const referer = Astro.locals.referer;
 
 const localIp = String(Astro.locals.local_ip || Astro.locals.clientIP || "");
 
-logger.info(
+(Astro.locals as any).logger.info(
   {
     route: Astro.url.pathname,
     referer,
@@ -23,7 +22,18 @@ logger.info(
     local_ip: localIp,
     locale,
   },
-  "403 page render"
+  "403 page render",
+);
+
+(Astro.locals as any).logger.error(
+  {
+    route: Astro.url.pathname,
+    referer,
+    ip: Astro.locals.clientIP,
+    local_ip: localIp,
+    locale,
+  },
+  "403 page render throw error",
 );
 
 let posts = {
@@ -38,7 +48,10 @@ let posts = {
 };
 
 const restrictionHtml = highlightPlaceholders(
-  t(locale, "您所在的地区已被禁止访问我们的网站，给您造成的不便，敬请见谅。如有任何疑问，请联系24小时在线客服，我们将竭诚为您服务。"),
+  t(
+    locale,
+    "您所在的地区已被禁止访问我们的网站，给您造成的不便，敬请见谅。如有任何疑问，请联系24小时在线客服，我们将竭诚为您服务。",
+  ),
 );
 
 try {
@@ -52,14 +65,18 @@ try {
     60000,
   );
 
-  logger.info(
-    { k: "official.chat.web.url.text", hasData: !!res?.data, hasValue: !!res?.data?.value },
+ (Astro.locals as any).logger.info(
+    {
+      k: "official.chat.web.url.text",
+      hasData: !!res?.data,
+      hasValue: !!res?.data?.value,
+    },
     "kv_config_ok",
   );
 
   if (res?.data) posts = { ...posts, ...res.data };
 } catch (error) {
-  logger.error({ err: error }, "kv_config_failed");
+  (Astro.locals as any).logger.error({ err: error }, "kv_config_failed");
 }
 ---
 
@@ -82,7 +99,7 @@ try {
     class="mt-30 xs:hidden sm:hidden md:hidden lg:hidden xl:flex h-[100%] items-center justify-center flex gap-10"
   >
     <!-- <img src={Img} alt={'403图片'} /> -->
-    <ForbiddenImage  />
+    <ForbiddenImage />
     <div class="h-[100%] flex flex-col justify-center max-w-[410px]">
       <h1 class="pb-[24px]">
         <img
@@ -123,7 +140,6 @@ try {
         <RetryButton
           title={t(locale, "尝试重新访问")}
           class={`btn-info ml-4`}
-          
         />
       </div>
     </div>
@@ -140,7 +156,7 @@ try {
     </h3>
     <h3 class="text-center font-600 text-[#2996F5] mt-2">{String(posts.ip)}</h3>
     <!-- <h3 class="text-center text-[red] mt-2">{String(posts.local_ip)}</h3> -->
-    <ForbiddenImage class="h-[235px] m-auto mt-7.5 block"  />
+    <ForbiddenImage class="h-[235px] m-auto mt-7.5 block" />
     <!-- <Image
       src={import("~/assets/svg/403.svg")}
       alt="403 logo"
@@ -177,7 +193,6 @@ try {
       bg-white text-[#1649FF] text-[16px] font-600
       shadow-[inset_0_0_0_1px_#1649FF]
       transition-all-300 hover:bg-white/100 active:scale-98`}
-        
       />
     </div>
   </div>
