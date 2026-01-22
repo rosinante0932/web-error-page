@@ -85,6 +85,18 @@ export const site_config = (env = "dev") => {
         default: "-1003287447129",
       }),
 
+      TG_CHAT_TITLE: envField.string({
+        context: "server",
+        access: "secret",
+        default: "403 日志告警（测试）",
+      }),
+
+      PERF_TG_ON: envField.string({
+        context: "server",
+        access: "secret",
+        default: "true",
+      }),
+      
     },
     rc: {
       BOSS: envField.string({
@@ -165,6 +177,18 @@ export const site_config = (env = "dev") => {
         context: "server",
         access: "secret",
         default: "-5168007183",
+      }),
+
+      TG_CHAT_TITLE: envField.string({
+        context: "server",
+        access: "secret",
+        default: "403 日志告警（预发）",
+      }),
+
+      PERF_TG_ON: envField.string({
+        context: "server",
+        access: "secret",
+        default: "true",
       }),
     },
     prod: {
@@ -247,6 +271,18 @@ export const site_config = (env = "dev") => {
         context: "server",
         access: "secret",
         default: "-5168007183",
+      }),
+
+      TG_CHAT_TITLE: envField.string({
+        context: "server",
+        access: "secret",
+        default: "403 日志告警（生产）",
+      }),
+
+      PERF_TG_ON: envField.string({
+        context: "server",
+        access: "secret",
+        default: "true",
       }),
     },
   };

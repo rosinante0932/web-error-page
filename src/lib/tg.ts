@@ -1,4 +1,4 @@
-import { DOCKER_PROXY_IP, TG_BOT_TOKEN, TG_CHAT_ID } from "astro:env/server";
+import { DOCKER_PROXY_IP, TG_BOT_TOKEN, TG_CHAT_ID, TG_CHAT_TITLE } from "astro:env/server";
 import type { DestinationStream } from "pino";
 import crypto from "node:crypto";
 import { fetch, ProxyAgent } from "undici";
@@ -61,11 +61,16 @@ export const tgProxyAgent = new ProxyAgent({
   connect: { family: 4 },
 });
 
+function clampText(text: string) {
+  if (text.length <= TG_TEXT_LIMIT) return text;
+  return text.slice(0, TG_TEXT_LIMIT - 50) + "\n...(truncated)";
+}
+
+/**
+ * 底层发送（不导出，避免被误用）
+ */
 async function tgSend(text: string) {
-  // 保险：绝对不超过 TG 限制
-  if (text.length > TG_TEXT_LIMIT) {
-    text = text.slice(0, TG_TEXT_LIMIT - 50) + "\n...(truncated)";
-  }
+  text = clampText(text);
 
   const res = await fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
     method: "POST",
@@ -82,6 +87,51 @@ async function tgSend(text: string) {
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`tg_send_failed status=${res.status} body=${body}`);
+  }
+}
+
+/**
+ * ✅ 对外导出：发送纯文本（用于体检报告/通知等）
+ * - 默认使用全局限流（避免刷屏）
+ */
+export async function sendTelegramText(text: string, opts?: { useGlobalRateLimit?: boolean }) {
+  const useGlobalRateLimit = opts?.useGlobalRateLimit ?? true;
+  if (useGlobalRateLimit && !canSendGlobal()) return;
+  await tgSend(text);
+}
+
+/**
+ * ✅ 对外导出：发送 JSON 体检报告（支持分片）
+ * - 默认使用全局限流（避免刷屏）
+ * - 不走 createTelegramStream，所以不会被 warn/error/fatal 限制
+ */
+export async function sendTelegramJsonReport(opts: {
+  title: string;                 // 体检标题，例如 "🩺 Health Report"
+  headerLines?: string[];        // 可读摘要行（Markdown）
+  payload: any;                  // JSON 详情（会分片）
+  useGlobalRateLimit?: boolean;  // 默认 true
+}) {
+  const useGlobalRateLimit = opts.useGlobalRateLimit ?? true;
+  if (useGlobalRateLimit && !canSendGlobal()) return;
+
+  const header = [
+    `🩺 *${TG_CHAT_TITLE}*`,
+    `*${opts.title}*`,
+    "",
+    ...(opts.headerLines || []),
+  ].join("\n");
+
+  const jsonText = JSON.stringify(opts.payload ?? {}, null, 2);
+  const payloadParts = chunkString(jsonText, SAFE_PAYLOAD_LIMIT);
+
+  for (let i = 0; i < payloadParts.length; i++) {
+    const prefix =
+      i === 0
+        ? header + (payloadParts.length > 1 ? `\n\n📦 *Part 1/${payloadParts.length}*` : "")
+        : `📦 *Part ${i + 1}/${payloadParts.length}*`;
+
+    const msg = `${prefix}\n\n\`\`\`json\n${payloadParts[i]}\n\`\`\``;
+    await tgSend(msg);
   }
 }
 
@@ -120,7 +170,7 @@ export function createTelegramStream(): DestinationStream {
 
         /** 3) 正常发送：支持分片 */
         const header = [
-          "🚨 *Server Log Alert*",
+          `🚨 *${TG_CHAT_TITLE}*`,
           "",
           `*Domain:* ${log.domain || "-"}`,
           `*IP:* ${log.ip || "-"}`,
