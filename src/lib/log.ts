@@ -20,7 +20,7 @@ const APP_ROOT = process.env.APP_ROOT ? path.resolve(process.env.APP_ROOT) : APP
 const POD = process.env.POD_NAME || process.env.HOSTNAME || 'local';
 const LOCAL_FALLBACK_BASE = path.join(APP_ROOT, 'logs');
 
-function ensureWritableDir(dir) {
+function ensureWritableDir(dir: string) {
   try {
     fs.mkdirSync(dir, { recursive: true });
     fs.accessSync(dir, fs.constants.W_OK);
@@ -54,6 +54,7 @@ if (isTrue(LOG_TO_STDOUT)) streams.push({ stream: destination(1) });
 
 // ✅ 这一行就是加入 TG（warn 以上）
 streams.push({ level: "warn", stream: createTelegramStream() });
+streams.push({ level: "error", stream: createTelegramStream() });
 
 export const logger = pino(
   { level: String(LOG_LEVEL || "info").toLowerCase(), base: { pod: POD } },
