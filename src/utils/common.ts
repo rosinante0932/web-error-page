@@ -26,6 +26,8 @@ export const getIp = (ctx: APIContext) => {
     ctx.locals.ip = ip;
     ctx.locals.local_ip = ip;
   }
+
+  return ip
 }
 
 /**

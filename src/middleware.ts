@@ -1,6 +1,6 @@
 import type { APIContext, MiddlewareNext } from "astro";
 import { getIp } from "./utils/common";
-import { logger } from "@/lib/log";
+import { logger, withTrace } from "@/lib/log";
 
 const SUPPORTED_LOCALES = ["zh", "en", "ko", "th", "vi", "km"] as const;
 const DEFAULT_LOCALE = "zh";
@@ -25,9 +25,11 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
 
   const url = new URL(ctx.request.url);
   const { pathname, search } = url;
+  const domain = ctx.request.headers.get("host") || "";
 
   // 给后续页面 / API 用
   ctx.locals.traceId = traceId;
+
 
   // 静态资源直接放行（避免刷日志）
   if (pathname.startsWith("/_astro") || pathname.includes(".")) {
@@ -40,7 +42,8 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
 
   // 获取 IP
   try {
-    getIp(ctx);
+    const ip = getIp(ctx);
+    ctx.locals.logger = withTrace({ traceId, domain, ip });
   } catch (e) {
     ctx.locals.clientIP = "0.0.0.0";
     logger.warn({ traceId, pathname, err: e }, "middleware_getIp_failed");

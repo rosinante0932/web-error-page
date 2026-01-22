@@ -110,10 +110,22 @@ export function createTelegramStream(): DestinationStream {
         st.lastSentAt = t;
         sigMap.set(sig, st);
 
+        const levelName =
+          log.level >= 60 ? "fatal" :
+            log.level >= 50 ? "error" :
+              log.level >= 40 ? "warn" :
+                log.level >= 30 ? "info" :
+                  log.level >= 20 ? "debug" :
+                    "trace";
+
         /** 3) 正常发送：支持分片 */
         const header = [
           "🚨 *Server Log Alert*",
-          `*Level:* ${log.level}`,
+          "",
+          `*Domain:* ${log.domain || "-"}`,
+          `*IP:* ${log.ip || "-"}`,
+          `*Risk Level:* ${log.risk || levelName}`,
+          `*TraceId:* \`${log.traceId || "-"}\``,
           `*Time:* ${new Date(log.time).toISOString()}`,
           `*Pod:* ${log.pod || "-"}`,
         ].join("\n");
