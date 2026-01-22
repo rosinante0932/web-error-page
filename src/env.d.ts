@@ -21,6 +21,8 @@ declare module "astro:env/server" {
     export const LOG_BASE_DIR: string
     export const LOG_LEVEL: string
     export const LOG_TO_STDOUT: string
+    export const TG_BOT_TOKEN: string
+    export const TG_CHAT_ID: string
     // 还可以保留官方提供的 API
     export function getSecret(name: string): string | undefined
 }

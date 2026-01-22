@@ -71,6 +71,20 @@ export const site_config = (env = "dev") => {
         access: "secret",
         default: "true",
       }),
+
+
+      TG_BOT_TOKEN: envField.string({
+        context: "server",
+        access: "secret",
+        default: "8476025793:AAFjkxZaS4TD_dxv4s3Mf7nlqHnBH220dOI",
+      }),
+
+      TG_CHAT_ID: envField.string({
+        context: "server",
+        access: "secret",
+        default: "-5168007183",
+      }),
+
     },
     rc: {
       BOSS: envField.string({
@@ -140,6 +154,18 @@ export const site_config = (env = "dev") => {
         access: "secret",
         default: "true",
       }),
+
+      TG_BOT_TOKEN: envField.string({
+        context: "server",
+        access: "secret",
+        default: "8476025793:AAFjkxZaS4TD_dxv4s3Mf7nlqHnBH220dOI",
+      }),
+
+      TG_CHAT_ID: envField.string({
+        context: "server",
+        access: "secret",
+        default: "-5168007183",
+      }),
     },
     prod: {
       BOSS: envField.string({
@@ -192,7 +218,7 @@ export const site_config = (env = "dev") => {
         access: "secret",
         default: "true",
       }),
-      
+
       LOG_BASE_DIR: envField.string({
         context: "server",
         access: "secret",
@@ -209,6 +235,18 @@ export const site_config = (env = "dev") => {
         context: "server",
         access: "secret",
         default: "true",
+      }),
+
+      TG_BOT_TOKEN: envField.string({
+        context: "server",
+        access: "secret",
+        default: "8476025793:AAFjkxZaS4TD_dxv4s3Mf7nlqHnBH220dOI",
+      }),
+
+      TG_CHAT_ID: envField.string({
+        context: "server",
+        access: "secret",
+        default: "-5168007183",
       }),
     },
   };

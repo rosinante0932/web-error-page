@@ -1,4 +1,4 @@
-import { LOG_LEVEL, LOG_TO_STDOUT } from "astro:env/server";
+import { LOG_LEVEL, LOG_TO_STDOUT, DOCKER_PROXY_IP, TG_BOT_TOKEN, TG_CHAT_ID } from "astro:env/server";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,8 @@ import FileStreamRotator from "file-stream-rotator";
 function isTrue(v?: string) {
   return String(v ?? "").trim().toLowerCase() === "true";
 }
+
+console.log(DOCKER_PROXY_IP, TG_BOT_TOKEN, TG_CHAT_ID)
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
