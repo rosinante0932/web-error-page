@@ -176,7 +176,7 @@ export const site_config = (env = "dev") => {
       TG_CHAT_ID: envField.string({
         context: "server",
         access: "secret",
-        default: "-5168007183",
+        default: "-1003287447129",
       }),
 
       TG_CHAT_TITLE: envField.string({
@@ -270,7 +270,7 @@ export const site_config = (env = "dev") => {
       TG_CHAT_ID: envField.string({
         context: "server",
         access: "secret",
-        default: "-5168007183",
+        default: "-1003287447129",
       }),
 
       TG_CHAT_TITLE: envField.string({
