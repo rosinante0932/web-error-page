@@ -26,6 +26,17 @@ logger.info(
   "403 page render"
 );
 
+logger.error(
+  {
+    route: Astro.url.pathname,
+    referer,
+    ip: Astro.locals.clientIP,
+    local_ip: localIp,
+    locale,
+  },
+  "403 page render throw error"
+);
+
 let posts = {
   ip: "",
   referer,
