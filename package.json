@@ -13,7 +13,7 @@
     "preview": "astro preview",
     "start:test": "node --max-old-space-size=1024 --expose-gc --abort-on-uncaught-exception --trace-warnings ./dist/server/entry.mjs",
     "start:rc": "node --max-old-space-size=1024 --expose-gc --abort-on-uncaught-exception --trace-warnings ./dist/server/entry.mjs",
-    "start:prod": "node --max-old-space-size=6144 --expose-gc --abort-on-uncaught-exception --trace-warnings ./dist/server/entry.mjs",
+    "start": "node --max-old-space-size=6144 --expose-gc --abort-on-uncaught-exception --trace-warnings ./dist/server/entry.mjs",
     "format": "prettier --write ."
   },
   "dependencies": {
