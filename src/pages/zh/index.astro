@@ -25,17 +25,6 @@ const localIp = String(Astro.locals.local_ip || Astro.locals.clientIP || "");
   "403 page render",
 );
 
-(Astro.locals as any).logger.error(
-  {
-    route: Astro.url.pathname,
-    referer,
-    ip: Astro.locals.clientIP,
-    local_ip: localIp,
-    locale,
-  },
-  "403 page render throw error",
-);
-
 let posts = {
   ip: "",
   referer,
