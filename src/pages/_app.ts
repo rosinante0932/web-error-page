@@ -4,9 +4,8 @@ export default () => {
   if (!isGcTaskStarted && import.meta.env.SSR) {
     isGcTaskStarted = true;
 
-    // 使用 cron 表达式，例如每 30 分钟执行一次：'*/30 * * * *'
     import('node-cron').then((cron) => {
-      cron.default.schedule('*/30 * * * *', async () => {
+      cron.default.schedule('0 */6 * * *', async () => {
         const { logger } = await import("@/lib/log");
         try {
           global.gc();
