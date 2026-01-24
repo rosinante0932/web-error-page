@@ -71,7 +71,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
   if (siteParam) ctx.locals.referer = siteParam;
 
   // inflight ++（只统计“业务请求”，静态资源已提前 return）
-  incInflight();
+  incInflight(traceId);
 
   // 获取 IP / 注入 trace logger
   try {
@@ -185,6 +185,6 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
     throw err;
   } finally {
     // ✅ 保证无论 redirect / next 抛错 / 正常返回，inflight 一定会减回去
-    decInflight();
+    decInflight(traceId);
   }
 }
