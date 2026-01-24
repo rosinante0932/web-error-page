@@ -15,6 +15,11 @@ function bytesToMB(n: number) {
     return Math.round((n / 1024 / 1024) * 10) / 10;
 }
 
+function percent(used: number, total: number) {
+    if (!total) return 0;
+    return Math.round((used / total) * 100);
+}
+
 export function buildHealthReport(pod = process.env.HOSTNAME || "local") {
     const inflight = getInflight();
     const mem = memSnap();
@@ -43,7 +48,14 @@ export function buildHealthReport(pod = process.env.HOSTNAME || "local") {
         kind: "health",
         pod,
         inflight,
-        mem,
+        mem: {
+            rssMB: bytesToMB(mem.rss),
+            heapUsedMB: bytesToMB(mem.heapUsed),
+            heapTotalMB: bytesToMB(mem.heapTotal),
+            heapUsagePct: percent(mem.heapUsed, mem.heapTotal),
+            externalMB: bytesToMB(mem.external),
+            arrayBuffersMB: bytesToMB(mem.arrayBuffers),
+        },
         eld,
         gc,
         sys,
