@@ -91,7 +91,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
 
     if (pathname === "/") {
       const defaultLang = getPreferredLanguage(ctx.request.headers);
-      (ctx.locals as any).info(
+      (ctx.locals as any).logger.info(
         { traceId, pathname, to: `/${defaultLang}${search}`, ip: ctx.locals.clientIP },
         "redirect_root_locale"
       );
@@ -99,7 +99,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
     }
 
     if (!currentLocale) {
-      (ctx.locals as any).warn(
+      (ctx.locals as any).logger.warn(
         { traceId, pathname, to: `/${DEFAULT_LOCALE}${pathname}${search}`, ip: ctx.locals.clientIP },
         "redirect_missing_locale"
       );
@@ -109,7 +109,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
     const res = await next();
     const costMs = Date.now() - started;
 
-    (ctx.locals as any).info(
+    (ctx.locals as any).logger.info(
       {
         traceId,
         method: ctx.request.method,
