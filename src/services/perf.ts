@@ -1,5 +1,6 @@
 import os from "node:os";
 import { monitorEventLoopDelay, PerformanceObserver } from "node:perf_hooks";
+import cron from "node-cron";
 
 declare global {
     // eslint-disable-next-line no-var
@@ -166,22 +167,25 @@ export function initPerfOnce(opts: {
 
 /**
  * 每隔 N 小时发送一次“体检报告”到 TG
- */
-// ✅ 不再假设 tgAlert / tgSend 存在
-// ✅ 直接用 logger.warn 走你现有 createTelegramStream 推送 TG
-type TgSender = never;
-
-/**
- * 每隔 N 小时发送一次“体检报告”到 TG
  * 实现方式：logger.warn(...) -> pino destination(createTelegramStream) -> TG
  */
+
 export function startPerfTgReporter(opts: {
     enabled: boolean;
     everyHours: number; // 6
     pod?: string;
-    logger: any;        // 这里传你的 pino logger（已经接了 createTelegramStream）
+    logger: any;
+    timezone?: string;  // "Asia/Bangkok" | "Asia/Shanghai"
+    boot?: boolean;     // 是否启动立刻发一条
 }) {
-    const { enabled, everyHours, pod = process.env.HOSTNAME || "local", logger } = opts;
+    const {
+        enabled,
+        everyHours,
+        pod = process.env.HOSTNAME || "local",
+        logger,
+        timezone = "Asia/Bangkok",
+        boot = false, // 你要严格整点就 false
+    } = opts;
 
     if (!enabled) {
         logger.info({ type: "perf", msg: "tg_reporter_disabled" });
@@ -190,45 +194,49 @@ export function startPerfTgReporter(opts: {
     if (globalThis.__perf_tg_inited) return;
     globalThis.__perf_tg_inited = true;
 
-    const everyMs = Math.max(1, everyHours) * 60 * 60 * 1000;
+    // ✅ 每 N 小时的整点：minute=0，hour= */N
+    // 例如 everyHours=6 => "0 */6 * * *" -> 00:00/06:00/12:00/18:00
+    const expr = `0 */${Math.max(1, everyHours)} * * *`;
 
-    const emitOnce = (reason: "boot" | "interval") => {
+    const emitOnce = (reason: "boot" | "cron") => {
         const { summary, detail } = buildHealthReport(pod);
 
-        // ⚠️ 关键：level >= 40 才会被 createTelegramStream 发送到 TG
-        // 所以这里用 warn（40）
         logger.warn(
             {
                 type: "perf",
                 kind: "health",
                 msg: `health_report_${reason}`,
                 pod,
-                // 给 TG 头部渲染用（你 TG 里会把整个 JSON 打出来）
-                text: summary,
+                text: summary,  // 你 TG 里可直接展示 summary
                 detail,
-                // 让你的 TG header 里 risk level 更好看（可选）
                 risk: "health",
             },
             "health_report"
         );
-
-        logger.info({ type: "perf", kind: "health", msg: "tg_report_emitted", reason, pod });
     };
 
-    // 启动先来一条
-    try {
-        emitOnce("boot");
-    } catch (e) {
-        logger.warn({ type: "perf", msg: "tg_report_boot_failed", err: (e as any)?.stack || String(e) });
+    // 可选：启动就发一条（不想要就关掉）
+    if (boot) {
+        try {
+            emitOnce("boot");
+        } catch (e) {
+            logger.warn({ type: "perf", msg: "tg_report_boot_failed", err: (e as any)?.stack || String(e) });
+        }
     }
 
-    setInterval(() => {
-        try {
-            emitOnce("interval");
-        } catch (e) {
-            logger.warn({ type: "perf", msg: "tg_report_interval_failed", err: (e as any)?.stack || String(e) });
+    cron.schedule(
+        expr,
+        () => {
+            try {
+                emitOnce("cron");
+            } catch (e) {
+                logger.warn({ type: "perf", msg: "tg_report_cron_failed", err: (e as any)?.stack || String(e) });
+            }
+        },
+        {
+            timezone, // ✅ 时区决定“整点”是泰国还是上海
         }
-    }, everyMs).unref();
+    );
 
-    logger.info({ type: "perf", msg: "tg_reporter_enabled", everyHours, everyMs, pod });
+    logger.info({ type: "perf", msg: "tg_reporter_enabled", expr, timezone, everyHours, pod });
 }

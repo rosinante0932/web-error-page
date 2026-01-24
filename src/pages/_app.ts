@@ -8,8 +8,8 @@ export default () => {
       cron.default.schedule('0 */6 * * *', async () => {
         const { logger } = await import("@/lib/log");
         try {
-          global.gc();
-          logger.debug({ pid: process.pid }, "[GC] manual gc triggered");
+          (global as any).gc();
+          logger.warn({ pid: process.pid }, "[GC] manual gc triggered");
         } catch (e) {
           logger.warn({ err: e }, "[GC] manual gc failed");
         }

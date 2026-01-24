@@ -48,6 +48,8 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
     everyHours: 6,
     pod: process.env.POD_NAME || process.env.HOSTNAME || "local",
     logger: logger, // 你的 pino logger（已经接 createTelegramStream）
+    timezone: "Asia/Shanghai",
+    boot: false, // 严格整点
   });
 
   const started = Date.now();
@@ -57,7 +59,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
   const { pathname, search } = url;
   const domain = ctx.request.headers.get("host") || "";
 
-  ctx.locals.traceId = traceId;
+  (ctx.locals as any).traceId = traceId;
 
   // 静态资源直接放行（避免刷日志 / 影响 inflight 统计意义）
   if (pathname.startsWith("/_astro") || pathname.includes(".")) {
@@ -74,12 +76,12 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
   // 获取 IP / 注入 trace logger
   try {
     const ip = getIp(ctx);
-    ctx.locals.logger = withTrace({ traceId, domain, ip });
+    (ctx.locals as any).logger = withTrace({ traceId, domain, ip });
   } catch (e) {
     ctx.locals.clientIP = "0.0.0.0";
     logger.warn({ traceId, pathname, err: e }, "middleware_getIp_failed");
     // 给个兜底 logger，避免后面 ctx.locals.logger 为空
-    ctx.locals.logger = withTrace({ traceId, domain, ip: ctx.locals.clientIP });
+    (ctx.locals as any).logger = withTrace({ traceId, domain, ip: ctx.locals.clientIP });
   }
 
   try {
@@ -89,7 +91,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
 
     if (pathname === "/") {
       const defaultLang = getPreferredLanguage(ctx.request.headers);
-      ctx.locals.logger.info(
+      (ctx.locals as any).info(
         { traceId, pathname, to: `/${defaultLang}${search}`, ip: ctx.locals.clientIP },
         "redirect_root_locale"
       );
@@ -97,7 +99,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
     }
 
     if (!currentLocale) {
-      ctx.locals.logger.warn(
+      (ctx.locals as any).warn(
         { traceId, pathname, to: `/${DEFAULT_LOCALE}${pathname}${search}`, ip: ctx.locals.clientIP },
         "redirect_missing_locale"
       );
@@ -107,7 +109,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
     const res = await next();
     const costMs = Date.now() - started;
 
-    ctx.locals.logger.info(
+    (ctx.locals as any).info(
       {
         traceId,
         method: ctx.request.method,
@@ -122,7 +124,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
 
     // 慢请求：补充 perf 快照
     if (PERF_REQ_ON && PERF_REQ_SLOW_MS_NUM > 0 && costMs >= PERF_REQ_SLOW_MS_NUM) {
-      ctx.locals.logger.warn(
+      (ctx.locals as any).logger.warn(
         {
           traceId,
           type: "perf",
@@ -147,7 +149,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
   } catch (err) {
     const costMs = Date.now() - started;
 
-    ctx.locals.logger.error(
+    (ctx.locals as any).logger.error(
       {
         traceId,
         method: ctx.request.method,
@@ -162,7 +164,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
 
     // 失败也可以按需打慢（可选）
     if (PERF_REQ_ON && PERF_REQ_SLOW_MS_NUM > 0 && costMs >= PERF_REQ_SLOW_MS_NUM) {
-      ctx.locals.logger.warn(
+      (ctx.locals as any).logger.warn(
         {
           traceId,
           type: "perf",
