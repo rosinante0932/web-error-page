@@ -94,7 +94,7 @@ export const site_config = (env = "dev") => {
       PERF_TG_ON: envField.string({
         context: "server",
         access: "secret",
-        default: "true",
+        default: "false",
       }),
       
     },
