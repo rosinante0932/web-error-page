@@ -2,7 +2,7 @@ import { encrypter } from '../utils/encrypterSingleton'
 import { appVersion } from '@/constant/encrypt.constant'
 import { urlEncrypter } from '../utils/url-encrypt'
 import { PROD_SITE_URL, ENCRYPT } from 'astro:env/server'
-import { logger } from '@/lib/log'
+import { logger } from '@/lib/server-logger/index.server'
 
 const TIMEOUT = 10_000;
 const MAX_RESPONSE_SIZE = 1_024 * 1024;

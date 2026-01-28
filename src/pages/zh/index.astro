@@ -3,10 +3,11 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import { highlightPlaceholders } from "@/utils/common";
 import API from "@/api/index.js";
 import { t, resolveLocale, type Locale } from "@/lib/i18n";
-import ForbiddenImage from "@/components/Forbidden.vue";
 import "@/assets/css/initial.css";
 import RetryButton from "@/components/RetryButton.vue";
 import { fetchWithCache } from "@/lib/cache";
+import ErrorBoundary from "@/components/ErrorBoundary.vue";
+import ForbiddenImage from "@/components/Forbidden.vue";
 
 const locale: Locale = resolveLocale(Astro.currentLocale);
 const title = t(locale, "访问受限制");
@@ -54,7 +55,7 @@ try {
     60000,
   );
 
- (Astro.locals as any).logger.info(
+  (Astro.locals as any).logger.info(
     {
       k: "official.chat.web.url.text",
       hasData: !!res?.data,
@@ -88,7 +89,10 @@ try {
     class="mt-30 xs:hidden sm:hidden md:hidden lg:hidden xl:flex h-[100%] items-center justify-center flex gap-10"
   >
     <!-- <img src={Img} alt={'403图片'} /> -->
-    <ForbiddenImage />
+    <ErrorBoundary client:only="vue">
+      <ForbiddenImage client:only/>
+    </ErrorBoundary>
+
     <div class="h-[100%] flex flex-col justify-center max-w-[410px]">
       <h1 class="pb-[24px]">
         <img
@@ -126,10 +130,12 @@ try {
         <a href={posts.value}>
           <button class="btn-primary"> {t(locale, "联系客服")} </button></a
         >
-        <RetryButton
-          title={t(locale, "尝试重新访问")}
-          class={`btn-info ml-4`}
-        />
+        <ErrorBoundary client:load>
+          <RetryButton
+            title={t(locale, "尝试重新访问")}
+            class={`btn-info ml-4`}
+          />
+        </ErrorBoundary>
       </div>
     </div>
   </div>
@@ -143,9 +149,14 @@ try {
         >{String(posts.country)} {String(posts.city)}
       </span>
     </h3>
-    <h3 class="text-center font-600 text-[#2996F5] mt-2">{String(posts.ip)}</h3>
+    <h3 class="text-center font-600 text-[#2996F5] mt-2">
+      {String(posts.ip)}
+    </h3>
     <!-- <h3 class="text-center text-[red] mt-2">{String(posts.local_ip)}</h3> -->
-    <ForbiddenImage class="h-[235px] m-auto mt-7.5 block" />
+    <ErrorBoundary client:load>
+      <ForbiddenImage />
+    </ErrorBoundary>
+
     <!-- <Image
       src={import("~/assets/svg/403.svg")}
       alt="403 logo"
@@ -174,15 +185,17 @@ try {
     shadow-[0_0_16px_rgba(51,157,255,0.2)] mt-4"
     >
       <!-- 内层：按钮主体 + 实线蓝色描边（inset 1px） -->
-      <RetryButton
-        title={t(locale, "尝试重新访问")}
-        class={`h-[44px] px-6 w-[100%]
+      <ErrorBoundary client:load>
+        <RetryButton
+          title={t(locale, "尝试重新访问")}
+          class={`h-[44px] px-6 w-[100%]
       rounded-[23.25px]
       inline-flex items-center justify-center gap-[9.69px]
       bg-white text-[#1649FF] text-[16px] font-600
       shadow-[inset_0_0_0_1px_#1649FF]
       transition-all-300 hover:bg-white/100 active:scale-98`}
-      />
+        />
+      </ErrorBoundary>
     </div>
   </div>
 </BaseLayout>

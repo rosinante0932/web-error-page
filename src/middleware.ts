@@ -1,6 +1,6 @@
 import type { APIContext, MiddlewareNext } from "astro";
 import { getIp } from "./utils/common";
-import { logger, withTrace } from "@/lib/log";
+import { logger, withTrace } from "@/lib/server-logger/index.server";
 
 import {
   initPerfOnce,

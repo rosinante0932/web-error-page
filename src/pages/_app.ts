@@ -6,7 +6,7 @@ export default () => {
 
     import('node-cron').then((cron) => {
       cron.default.schedule('0 */6 * * *', async () => {
-        const { logger } = await import("@/lib/log");
+        const { logger } = await import("@/lib/server-logger/index.server");
         try {
           (global as any).gc();
           logger.warn({ pid: process.pid }, "[GC] manual gc triggered");
@@ -16,7 +16,7 @@ export default () => {
 
       });
     }).catch(async (e) => {
-      const { logger } = await import("@/lib/log");
+      const { logger } = await import("@/lib/server-logger/index.server");
       logger.error({ e }, "[GC] failed to load node-cron");
     });
 
