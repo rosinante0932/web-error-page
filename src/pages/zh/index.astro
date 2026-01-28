@@ -88,7 +88,6 @@ try {
   <div
     class="mt-30 xs:hidden sm:hidden md:hidden lg:hidden xl:flex h-[100%] items-center justify-center flex gap-10"
   >
-    <!-- <img src={Img} alt={'403图片'} /> -->
     <ErrorBoundary client:only="vue">
       <ForbiddenImage client:only/>
     </ErrorBoundary>
@@ -119,12 +118,6 @@ try {
         </span>
       </h3>
 
-      <!-- <h3 class="mt-[10px]">
-        <span class="text-[red]">
-          {String(posts.local_ip)}
-        </span>
-      </h3> -->
-
       <p class="text-[20px] pr-10 leading-8" set:html={restrictionHtml} />
       <div class="pt-5">
         <a href={posts.value}>
@@ -152,15 +145,9 @@ try {
     <h3 class="text-center font-600 text-[#2996F5] mt-2">
       {String(posts.ip)}
     </h3>
-    <!-- <h3 class="text-center text-[red] mt-2">{String(posts.local_ip)}</h3> -->
     <ErrorBoundary client:load>
       <ForbiddenImage />
     </ErrorBoundary>
-
-    <!-- <Image
-      src={import("~/assets/svg/403.svg")}
-      alt="403 logo"
-    /> -->
     <p
       class="text-xs/5 text-[#011E42] text-center"
       set:html={restrictionHtml}
@@ -184,7 +171,6 @@ try {
     bg-[linear-gradient(90deg,#339DFF_0%,#1649FF_100%)]
     shadow-[0_0_16px_rgba(51,157,255,0.2)] mt-4"
     >
-      <!-- 内层：按钮主体 + 实线蓝色描边（inset 1px） -->
       <ErrorBoundary client:load>
         <RetryButton
           title={t(locale, "尝试重新访问")}
