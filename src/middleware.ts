@@ -40,7 +40,7 @@ const PERF_REQ_SLOW_MS_NUM = Number(process.env.PERF_REQ_SLOW_MS || 1000);
 const POD = process.env.POD_NAME || process.env.HOSTNAME || "local";
 
 export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
-  // ✅ standalone 下没自定义 server：用“首次请求初始化一次”的方式最稳
+  // standalone 下没自定义 server：用“首次请求初始化一次”的方式最稳
   initPerfOnce({ enabled: PERF_ON, sampleMs: PERF_SAMPLE_MS_NUM, logger, pod: POD });
 
   startPerfTgReporter({
@@ -184,7 +184,7 @@ export async function onRequest(ctx: APIContext, next: MiddlewareNext) {
 
     throw err;
   } finally {
-    // ✅ 保证无论 redirect / next 抛错 / 正常返回，inflight 一定会减回去
+    // 保证无论 redirect / next 抛错 / 正常返回，inflight 一定会减回去
     decInflight(traceId);
   }
 }
