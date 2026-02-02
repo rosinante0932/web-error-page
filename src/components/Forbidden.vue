@@ -5,6 +5,14 @@
 
 <script setup lang="ts">
 import forbiddenUrl from '@/assets/img/403.png?url'
+import { useSafeEffect } from '@/composables/useSafeEffect';
+
 const props = defineProps(['class'])
+
+const data = null;
+
+useSafeEffect(() => {
+    (data as any).username = 1
+})
 
 </script>

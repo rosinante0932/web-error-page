@@ -8,7 +8,7 @@
                     <img class="inline align-sub" :src="ballUrl" :alt="getLangMeta(lang).label" />
                 </span>
                 <span class="pl-2 relative">
-                    <span class="text-[#1f2937]">{{ getLangMeta(lang).lang }}</span>
+                    {{ getLangMeta(lang).lang }}
                     <ul @click.stop :class="[
                         'min-w-30 absolute translate-x-1/2 top-8 right-[50%] bg-[#F2F9FF] overflow-hidden rounded-[11px]',
                         'shadow-[0_16px_24px_rgba(43,142,203,0.08)] border border-[#2B8ECB]/20 z-100',
@@ -24,7 +24,6 @@
                     </ul>
                 </span>
             </div>
-            <img src="/assets/header/hover.svg" alt="" class="opacity-0" />
         </div>
 
         <!-- 移动端 -->
@@ -83,17 +82,17 @@ const onKeydown = (e: KeyboardEvent) => {
 }
 
 const changeLang = (url: string) => {
-    // 获取当前页面的查询参数
+     // 获取当前页面的查询参数
     const currentParams = new URLSearchParams(window.location.search)
-
+    
     // 解析目标 URL
     const targetUrl = new URL(url, window.location.origin)
-
+    
     // 将当前的查询参数添加到目标 URL
     currentParams.forEach((value, key) => {
         targetUrl.searchParams.set(key, value)
     })
-
+    
     window.open(targetUrl.toString(), '_self')
 }
 

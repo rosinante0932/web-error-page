@@ -1,15 +1,25 @@
-import type { App } from 'vue'
+let isGcTaskStarted = false;
 
-import piniaPersist from 'pinia-plugin-persistedstate'
-import type { VueQueryPluginOptions } from '@tanstack/vue-query' 
+export default () => {
+  if (!isGcTaskStarted && import.meta.env.SSR) {
+    isGcTaskStarted = true;
 
-export default (app: App) => {
-  // Each island gets its own query client (safe for Astro + islands)
-  const queryClient = new QueryClient()
-  const options: VueQueryPluginOptions = { queryClient }
-  // Installing multiple times is safe; Vue ignores duplicate plugins
-  const pinia = createPinia()
-  pinia.use(piniaPersist)          // 注册持久化插件
-  app.use(pinia)
-  app.use(VueQueryPlugin, options)
+    import('node-cron').then((cron) => {
+      cron.default.schedule('0 */6 * * *', async () => {
+        const { logger } = await import("@/lib/server-logger/index.server");
+        try {
+          (global as any).gc();
+          logger.warn({ pid: process.pid }, "[GC] manual gc triggered");
+        } catch (e) {
+          logger.warn({ err: e }, "[GC] manual gc failed");
+        }
+
+      });
+    }).catch(async (e) => {
+      const { logger } = await import("@/lib/server-logger/index.server");
+      logger.error({ e }, "[GC] failed to load node-cron");
+    });
+
+    console.log('[Runtime] GC Cron Task Scheduled');
+  }
 }

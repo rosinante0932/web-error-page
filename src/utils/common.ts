@@ -1,25 +1,38 @@
-import type { APIContext } from "astro"
+import type { APIContext } from "astro";
 import DOMPurify from "isomorphic-dompurify";
 
-export const isClient = typeof window !== 'undefined'
+export const isClient = typeof window !== "undefined";
 
-/**
- * @func getIpFn
- * @desc 获取ip
- */
-export const getIp = (ctx: APIContext) => {
-  const ip =
-    ctx.clientAddress ??
-    ctx.request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    ctx.request.headers.get('x-real-ip') ??
-    ctx.request.headers.get('cf-connecting-ip') ??
-    'unknown';
-
-  // console.log(ip)
-
-  ctx.locals.ip = ip;
-  ctx.locals.local_ip = ip;
+function pickFirstIp(xff?: string | null) {
+  if (!xff) return null;
+  // 可能是 "ip1, ip2, ip3"
+  const first = xff.split(",")[0]?.trim();
+  return first || null;
 }
+
+export const getIp = (ctx: APIContext) => {
+  // headers 可能存在，但也要小心 ctx.request 在某些内部阶段不可用
+  const headers = ctx?.request?.headers;
+
+  const ip =
+    ctx?.clientAddress ??
+    pickFirstIp(headers?.get("x-forwarded-for")) ??
+    headers?.get("x-real-ip") ??
+    headers?.get("cf-connecting-ip") ??
+    "unknown";
+
+  // 只有在 locals 可写时才写（避免 StaticClientAddressNotAvailable / prerender/build 阶段炸）
+  try {
+    if (ctx && "locals" in ctx && ctx.locals) {
+      ctx.locals.ip = ip;
+      ctx.locals.local_ip = ip;
+    }
+  } catch {
+    // 这里不要 console.error（会刷屏），静默即可
+  }
+
+  return ip;
+};
 
 /**
  * @func highlightPlaceholders

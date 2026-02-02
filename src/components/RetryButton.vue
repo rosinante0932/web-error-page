@@ -1,40 +1,50 @@
 <template>
-    <!-- 内层：按钮主体 + 实线蓝色描边（inset 1px） -->
-    <a :href="link">
-        <button :class="class">
-            {{ title }}
-        </button>
-    </a>
+  <!-- 内层：按钮主体 + 实线蓝色描边（inset 1px） -->
+  <a :href="link">
+    <button :class="class">
+      {{ title }}
+    </button>
+  </a>
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
-const props = defineProps(['title', 'class'])
+import { defineProps } from "vue";
+const props = defineProps(["title", "class"]);
 
-const link = ref("")
+const link = ref("");
 
 onMounted(() => {
+  const href = window.location.href;
 
-    const href = window.location.href;
+  // console.log(href, "href");
 
-    // console.log(href, 'href')
+  const tag = "?site=";
 
-    const tag = '?site='
+  const tagIndex = href.indexOf(tag);
 
-    const tagIndex = href.indexOf(tag);
+  // console.log(tagIndex, "tagIndex");
 
-    let getLink = href.substring(tagIndex + tag.length, href.length);
+  if (tagIndex === -1) {
+    return;
+  }
 
-    const newLinkOrigin = new URL(getLink);
+  let getLink = href.substring(tagIndex + tag.length, href.length);
 
-    // console.log(newLinkOrigin, 'newLinkOrigin')
+  const newLinkOrigin = new URL(getLink);
 
-    const newLink = `${newLinkOrigin.origin}${newLinkOrigin.hash}`
+  // console.log(newLinkOrigin, "newLinkOrigin");
 
-    // console.log(newLink, 'newLink')
+  let newLink = "";
+  if (newLinkOrigin.hash) {
+    newLink = `${newLinkOrigin.origin}${newLinkOrigin.hash}`;
+  } else if (newLinkOrigin.search) {
+    newLink = `${newLinkOrigin.origin}${newLinkOrigin.search}`;
+  } else {
+    newLink = `${newLinkOrigin.origin}`;
+  }
 
-    link.value = newLink
+  // console.log(newLink, "newLink");
 
-})
-
+  link.value = newLink;
+});
 </script>

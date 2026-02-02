@@ -6,6 +6,7 @@ import node from '@astrojs/node'
 import AutoImport from 'unplugin-auto-import/vite'
 import { fileURLToPath } from 'node:url'
 import { site_config } from './config/site.config.mjs'
+import { replaceAwsSecrets } from './builds/replace-aws-secrets'
 
 const APP_ENV = process.env.APP_ENV || 'dev'
 
@@ -55,6 +56,9 @@ export default defineConfig({
         '~': SRC
       }
     },
+    build: {
+      commonjsOptions: { transformMixedEsModules: true }
+    },
     plugins: [
       AutoImport({
         // 这里既可以导入函数，也可以导入“type 类型”
@@ -75,6 +79,7 @@ export default defineConfig({
         dts: 'src/auto-imports.d.ts',         // 生成声明文件，给 TS 用
         eslintrc: { enabled: true },          // 可选：生成 ESLint 配置，避免 “未定义” 报错
       }),
+      replaceAwsSecrets(),
     ],
   }
 })
