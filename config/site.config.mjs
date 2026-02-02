@@ -41,7 +41,7 @@ export const site_config = (env = "test") => {
       DOCKER_PROXY_IP: envField.string({
         context: "server",
         access: "secret",
-        default: "http://172.30.32.207:13080",
+        default: "http://kaifa:hHV1idQ8DuMmWZRMpRLyVitHvOa@172.30.32.86:13080",
       }),
       SITE_URL_TAG: envField.string({
         context: "server",
