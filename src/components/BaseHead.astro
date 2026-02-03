@@ -7,11 +7,22 @@ const alternates = getAbsoluteLocaleUrlList(Astro.url.pathname)
 ---
 <!-- Global SEO Head -->
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta
+  name="viewport"
+  content="
+    width=device-width,
+    initial-scale=1.0,
+    maximum-scale=1.0,
+    user-scalable=no,
+    viewport-fit=cover
+  "
+/>
 <title>{title}</title>
 <meta name="description" content={description} />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+<link rel="stylesheet" href="/css/leaflet.css" />
+<link rel="stylesheet" href="/css/L.Control.Locate.min.css" />
 
 {alternates.map((item: any) => (
   <link rel="alternate" hreflang={item.locale === Astro.currentLocale ? 'x-default' : item.lang} href={item.url} />

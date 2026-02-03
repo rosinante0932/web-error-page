@@ -91,8 +91,8 @@
 
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, watch, nextTick, shallowRef, markRaw } from "vue";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import type * as TYPE_L from "leaflet";
+
 import type { Franchise } from "@/data/franchise";
 
 type StoreImage = {
@@ -129,16 +129,16 @@ type Store = {
 const mapElDesktop = ref<HTMLDivElement | null>(null);
 const mapElMobile = ref<HTMLDivElement | null>(null);
 
-const map = shallowRef<L.Map | null>(null);
+const map = shallowRef<TYPE_L.Map | null>(null);
 
 // 图层控制相关
-let layerCtrl: L.Control.Layers | null = null;
+let layerCtrl: TYPE_L.Control.Layers | null = null;
 // 门店层
-let storeLayer: L.LayerGroup | null = null;
+let storeLayer: TYPE_L.LayerGroup | null = null;
 // 临时标记层
-let tempLayer: L.LayerGroup | null = null;
+let tempLayer: TYPE_L.LayerGroup | null = null;
 
-const markers = new Map<string, L.Marker>();
+const markers = new Map<string, TYPE_L.Marker>();
 const stores = ref<Store[]>([]);
 const keyword = ref("");
 const panelOpen = ref(true);
@@ -149,11 +149,11 @@ const menu = ref({
     open: false,
     x: 0,
     y: 0,
-    latlng: null as null | L.LatLng,
+    latlng: null as null | TYPE_L.LatLng,
 });
 
 // 你原来留着也行（但真正清理靠 tempLayer.clearLayers）
-let tempMarkers: L.Marker[] = [];
+let tempMarkers: TYPE_L.Marker[] = [];
 
 function isMobile() {
     return window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
@@ -330,7 +330,7 @@ function renderMarkers() {
     const mobile = isMobile();
 
     for (const s of stores.value) {
-        const m = L.marker([s.lat, s.lng]).addTo(storeLayer);
+        const m = window.L.marker([s.lat, s.lng]).addTo(storeLayer);
 
         m.bindTooltip(s.nameZh, {
             permanent: true,
@@ -397,7 +397,7 @@ async function menuAction(type: "marker" | "address" | "center" | "coord") {
         if (type === "marker") {
             if (!tempLayer) return;
 
-            const mk = L.marker(latlng).addTo(tempLayer); // 加到临时标记层
+            const mk = window.L.marker(latlng).addTo(tempLayer); // 加到临时标记层
             mk.bindPopup(
                 `<div style="font-weight:800">临时标记</div>
                 <div style="color:#666;font-size:12px">${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}</div>`
@@ -416,7 +416,7 @@ async function menuAction(type: "marker" | "address" | "center" | "coord") {
             const j = await r.json();
             const name = j?.display_name || `${latlng.lat}, ${latlng.lng}`;
 
-            L.popup({ maxWidth: 320 })
+            window.L.popup({ maxWidth: 320 })
                 .setLatLng(latlng)
                 .setContent(
                     `<div style="font-weight:800;margin-bottom:6px">地址</div>
@@ -435,7 +435,7 @@ async function menuAction(type: "marker" | "address" | "center" | "coord") {
                 await navigator.clipboard.writeText(text);
             } catch { }
 
-            L.popup({ maxWidth: 260 })
+            window.L.popup({ maxWidth: 260 })
                 .setLatLng(latlng)
                 .setContent(
                     `<div style="font-weight:800;margin-bottom:6px">坐标</div>
@@ -448,7 +448,7 @@ async function menuAction(type: "marker" | "address" | "center" | "coord") {
         }
     } catch (e: any) {
         console.error("[menuAction failed]", type, e?.message || e);
-        L.popup({ closeButton: true, autoClose: true })
+        window.L.popup({ closeButton: true, autoClose: true })
             .setLatLng(latlng)
             .setContent(
                 `<div style="color:#e11d48;font-weight:800">操作失败</div>
@@ -505,19 +505,45 @@ function initMap(container: HTMLDivElement) {
         try { anyEl._leaflet_id = undefined; } catch { }
     }
 
-    const m = markRaw(L.map(container, { zoomControl: true }).setView([13.736, 100.523], 12));
+    const m = markRaw(window.L.map(container, {
+        zoomControl: true,
+        maxZoom: 18,  // 最大缩放距离
+        minZoom: 10,  // 最小缩放距离
+
+    }).setView([13.736, 100.523], 12));
+
+    console.log("has locate?", (window.L.control as any).locate, (window as any).L?.control?.locate);
+
+
+    /* ================= 比例尺 ================= */
+    // imperial 显示：英尺（ft） / 英里（mi）
+    // metric 显示：米（m） / 千米（km）
+    markRaw(window.L.control.scale({ metric: true, imperial: false, position: "bottomleft" })).addTo(m);
+
+    /* ================= 定位控件 ================= */
+
+    console.log(window.L.control, 'L.control')
+    markRaw(
+        (window.L.control as any).locate({
+            position: "topright",
+            flyTo: true,
+            showCompass: true,
+            keepCurrentZoomLevel: false,
+        })
+    ).addTo(m);
+
     map.value = m;
 
     // 底图
-    const osm = markRaw(L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    const osm = markRaw(window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
     }));
 
-    const cartoPositron = markRaw(L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    const cartoPositron = markRaw(window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
         attribution: "© OpenStreetMap © CARTO",
     }));
 
-    const cartoVoyager = markRaw(L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    const cartoVoyager = markRaw(window.L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
         attribution: "© OpenStreetMap © CARTO",
     }));
 
@@ -530,15 +556,15 @@ function initMap(container: HTMLDivElement) {
     };
 
     // 覆盖层
-    storeLayer = markRaw(L.layerGroup().addTo(m));
-    tempLayer = markRaw(L.layerGroup().addTo(m));
+    storeLayer = markRaw(window.L.layerGroup().addTo(m));
+    tempLayer = markRaw(window.L.layerGroup().addTo(m));
 
     const overlays: Record<string, L.Layer> = {
         "门店": storeLayer,
         "临时标记": tempLayer,
     };
 
-    layerCtrl = markRaw(L.control.layers(baseLayers, overlays, { position: "topright" }).addTo(m));
+    layerCtrl = markRaw(window.L.control.layers(baseLayers, overlays, { position: "topright" }).addTo(m));
 
     // 事件
     m.on("contextmenu", (e: L.LeafletMouseEvent) => {
@@ -585,7 +611,7 @@ function onKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") closeMenu();
 }
 
-onMounted(() => {
+onMounted(async () => {
     initial();
     window.addEventListener("resize", onResize);
     window.addEventListener("keydown", onKeydown);

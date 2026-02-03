@@ -1,0 +1,44 @@
+/* =========================
+   Leaflet 控件统一尺寸
+   ========================= */
+
+/* 控件容器 */
+.leaflet-control {
+    box-shadow: none;
+}
+
+/* 所有按钮的基础尺寸 */
+.leaflet-control a,
+.leaflet-control-layers-toggle {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 10px !important;
+}
+
+/* 图层按钮（layers）默认是 background-image，强制居中 */
+.leaflet-control-layers-toggle {
+    background-position: center !important;
+    background-size: 20px 20px !important;
+}
+
+/* Locate 插件里的 icon */
+.leaflet-control-locate a {
+    font-size: 18px;
+}
+
+/* hover / active 统一反馈 */
+.leaflet-control a:hover,
+.leaflet-control-layers-toggle:hover {
+    background: #f3f4f6 !important;
+}
+
+.leaflet-control a:active,
+.leaflet-control-layers-toggle:active {
+    transform: scale(0.96);
+}
