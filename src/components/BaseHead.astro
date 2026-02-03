@@ -3,7 +3,7 @@ import { getAbsoluteLocaleUrlList } from 'astro:i18n'
 import { t, resolveLocale, type Locale } from "@/lib/i18n";
 const locale: Locale = resolveLocale(Astro.currentLocale);
 const { title = t(locale, "访问受限制"), description = t(locale, "您所在的地区已被禁止访问我们的网站，给您造成的不便，敬请见谅。如有任何疑问，请联系24小时在线客服，我们将竭诚为您服务。"), image = '/favicon.svg', lang = Astro.currentLocale } = Astro.props
-const alternates = getAbsoluteLocaleUrlList(Astro.url.pathname)
+const alternates = getAbsoluteLocaleUrlList()
 ---
 <!-- Global SEO Head -->
 <meta charset="utf-8" />
@@ -21,8 +21,6 @@ const alternates = getAbsoluteLocaleUrlList(Astro.url.pathname)
 <meta name="description" content={description} />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
-<link rel="stylesheet" href="/css/leaflet.css" />
-<link rel="stylesheet" href="/css/L.Control.Locate.min.css" />
 
 {alternates.map((item: any) => (
   <link rel="alternate" hreflang={item.locale === Astro.currentLocale ? 'x-default' : item.lang} href={item.url} />
