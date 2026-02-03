@@ -1,6 +1,6 @@
 <template>
     <!-- 外层：桌面固定 600，移动端全屏 -->
-    <div class="h-[100vh] md:h-[600px] md:min-h-[600px] bg-[#EEF3FF]">
+    <div class="h-[100vh] md:h-[600px] md:min-h-[600px] bg-[#EEF3FF] relative">
         <!-- 桌面：左右两栏 -->
         <div class="hidden md:grid md:grid-cols-[320px_1fr] md:h-full">
             <!-- 左侧面板（桌面） -->
@@ -31,9 +31,9 @@
             <div ref="mapElDesktop" class="h-full" />
         </div>
 
-        <!-- 移动端：顶部搜索+列表（红框区域） + 下方地图 -->
+        <!-- 移动端：顶部搜索+列表 + 下方地图 -->
         <div class="md:hidden h-full flex flex-col relative z-1">
-            <!-- 顶部区域（红框） -->
+            <!-- 顶部区域 -->
             <div class="px-3 pt-3">
                 <div class="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
                     <!-- 搜索 + 按钮 -->
@@ -66,6 +66,26 @@
                 <div ref="mapElMobile" class="h-full rounded-2xl overflow-hidden border border-gray-200" />
             </div>
         </div>
+
+        <!-- 右键菜单覆盖层 -->
+        <div v-show="menu.open" class="fixed inset-0 z-[9999]" @mousedown="closeMenu" @touchstart="closeMenu">
+            <div class="context-menu" :style="{ left: menu.x + 'px', top: menu.y + 'px' }" @mousedown.stop
+                @touchstart.stop>
+                <button class="cm-item" @click="menuAction('marker')">
+                    <span class="cm-ico">📍</span>在此添加注记
+                </button>
+                <button class="cm-item" @click="menuAction('address')">
+                    <span class="cm-ico">🧭</span>显示地址
+                </button>
+                <button class="cm-item" @click="menuAction('coord')">
+                    <span class="cm-ico">📌</span>显示坐标
+                </button>
+                <div class="cm-sep"></div>
+                <button class="cm-item" @click="menuAction('center')">
+                    <span class="cm-ico">◎</span>将此处置于地图中间
+                </button>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -73,6 +93,7 @@
 import { onMounted, onBeforeUnmount, ref, watch, nextTick } from "vue";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import type { Franchise } from "@/data/franchise";
 
 type StoreImage = {
     type: string;
@@ -81,13 +102,20 @@ type StoreImage = {
     order?: number;
 };
 
+type CoordSource = "3d4d" | "q" | "at";
+
 type Store = {
     id: string;
     nameZh: string;
-    lat: number;
-    lng: number;
     cityZh: string;
     addressZh: string;
+
+    lat: number;
+    lng: number;
+
+    googleUrl: string;
+    coordSource: CoordSource;
+    confidence: "high" | "mid" | "low";
 
     images?: StoreImage[];
     rating?: number;
@@ -108,8 +136,75 @@ const stores = ref<Store[]>([]);
 const keyword = ref("");
 const panelOpen = ref(true);
 
+/** 右键菜单状态 */
+const menu = ref({
+    open: false,
+    x: 0,
+    y: 0,
+    latlng: null as null | L.LatLng,
+});
+
+let tempMarkers: L.Marker[] = [];
+
 function isMobile() {
     return window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+}
+
+function closeMenu() {
+    menu.value.open = false;
+}
+
+function clampMenuToViewport(x: number, y: number) {
+    const padding = 8;
+    const w = 220;
+    const h = 250; // 你这版菜单高度大约 240~260，给个安全值
+    const maxX = window.innerWidth - w - padding;
+    const maxY = window.innerHeight - h - padding;
+    return {
+        x: Math.max(padding, Math.min(x, maxX)),
+        y: Math.max(padding, Math.min(y, maxY)),
+    };
+}
+
+/** 解析 Google Maps 链接中的坐标 */
+function parseGoogleMapsLatLng(url: string) {
+    const u = String(url || "").trim();
+    if (!u) return null;
+
+    // 1) POI 真坐标：!3dLAT!4dLNG（最可信）
+    const m1 = u.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+    if (m1) {
+        return {
+            lat: Number(m1[1]),
+            lng: Number(m1[2]),
+            source: "3d4d" as const,
+            confidence: "high" as const,
+        };
+    }
+
+    // 2) 分享链接可能带 ?q=lat,lng 或 ?query=lat,lng
+    const mq = u.match(/[?&](?:q|query)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (mq) {
+        return {
+            lat: Number(mq[1]),
+            lng: Number(mq[2]),
+            source: "q" as const,
+            confidence: "mid" as const,
+        };
+    }
+
+    // 3) 视野中心：@LAT,LNG（不保证是 POI）
+    const m2 = u.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (m2) {
+        return {
+            lat: Number(m2[1]),
+            lng: Number(m2[2]),
+            source: "at" as const,
+            confidence: "low" as const,
+        };
+    }
+
+    return null;
 }
 
 async function load() {
@@ -126,7 +221,36 @@ async function load() {
     }
 
     const j = await r.json();
-    stores.value = (j.list ?? []) as Store[];
+    const rawList = (j.list ?? []) as Franchise[];
+
+    const parsedList: Store[] = [];
+
+    for (const item of rawList) {
+        const googleUrl = (item as any).googleUrl as string;
+        const p = parseGoogleMapsLatLng(googleUrl);
+
+        if (!p) {
+            console.warn("[skip] googleUrl missing/invalid:", (item as any).id, googleUrl);
+            continue;
+        }
+
+        // 强烈建议：过滤 @ 视角坐标，避免偏几百米/几公里
+        if (p.confidence === "low") {
+            console.warn("[skip] low confidence coord (@ center):", (item as any).id, googleUrl);
+            continue;
+        }
+
+        parsedList.push({
+            ...(item as any),
+            lat: p.lat,
+            lng: p.lng,
+            googleUrl,
+            coordSource: p.source,
+            confidence: p.confidence,
+        });
+    }
+
+    stores.value = parsedList;
     renderMarkers();
 }
 
@@ -140,14 +264,6 @@ function esc(v: any) {
         .replace(/'/g, "&#039;");
 }
 
-/**
- * @func buildPopupHtml
- * @desc 移动端弹窗适配策略：
- * - 宽度用 100%（由 popup-content 控制）
- * - 图片变矮
- * - 地址截断
- * - meta/status 手机隐藏
- */
 function buildPopupHtml(s: Store) {
     const first = Array.isArray(s.images) && s.images.length > 0 ? String(s.images[0].url || "") : "";
 
@@ -186,41 +302,21 @@ function buildPopupHtml(s: Store) {
   `;
 }
 
-function parseGoogleMapsLatLng(url: string) {
-    // ✅ 1) 最准确：!3dLAT!4dLNG（POI 坐标）
-    const m1 = url.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-    if (m1) {
-        return { lat: Number(m1[1]), lng: Number(m1[2]), source: "3d4d" as const };
-    }
-
-    // ⚠️ 2) 退而求其次：@LAT,LNG（常是视野中心，不一定是 POI）
-    const m2 = url.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
-    if (m2) {
-        return { lat: Number(m2[1]), lng: Number(m2[2]), source: "at" as const };
-    }
-
-    return null;
-}
-
-
-/**
- * @func isDesktopHover
- * @desc 桌面聚焦
- */
 function isDesktopHover() {
     return window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches ?? false;
 }
 
-/**
- * @func renderMarkers
- * @desc 渲染标记
- */
+function setMarkerTooltipOpacity(m: L.Marker, opacity: "0" | "1") {
+    const tip = m.getTooltip();
+    // Leaflet v1.9+：tooltip.getElement() 可拿到 DOM
+    const el = (tip as any)?.getElement?.() as HTMLElement | undefined;
+    if (el) el.style.opacity = opacity;
+}
+
 function renderMarkers() {
     markers.forEach((m) => m.remove());
     markers.clear();
     if (!map.value) return;
-
-    console.log(map.value.setView, 'mapmap===map')
 
     const hoverable = isDesktopHover();
     const mobile = isMobile();
@@ -228,11 +324,11 @@ function renderMarkers() {
     for (const s of stores.value) {
         const m = L.marker([s.lat, s.lng]).addTo(map.value);
 
-        // 永久显示名字（直接显示在地图上，不是 hover）
+        // 永久显示名字
         m.bindTooltip(s.nameZh, {
             permanent: true,
-            direction: "bottom",   // 放到下面
-            offset: [0, 10],       // 往下挪，避开 marker 尖
+            direction: "bottom",
+            offset: [0, 10],
             opacity: 1,
             interactive: false,
             className: "poi-label",
@@ -249,7 +345,10 @@ function renderMarkers() {
             offset: mobile ? [0, 18] : [0, 10],
         });
 
-        // 你原来的 hover 打开 popup 逻辑：只影响 popup，不影响名字显示
+        // popup 打开时隐藏 label，关闭恢复
+        m.on("popupopen", () => setMarkerTooltipOpacity(m, "0"));
+        m.on("popupclose", () => setMarkerTooltipOpacity(m, "1"));
+
         if (hoverable) {
             m.on("mouseover", () => m.openPopup());
             m.on("mouseout", () => m.closePopup());
@@ -257,53 +356,186 @@ function renderMarkers() {
 
         markers.set(s.id, m);
     }
+
+    // 自动 fitBounds
+    if (stores.value.length > 0) {
+        const latlngs = stores.value.map((s) => [s.lat, s.lng] as [number, number]);
+        map.value.fitBounds(latlngs, { padding: [30, 30] });
+    }
 }
 
-
-/**
- * @func focus
- * @desc 焦点
- */
 function focus(s: Store) {
     map.value?.setView([s.lat, s.lng], 16);
     markers.get(s.id)?.openPopup();
-
-    // 手机上点列表后自动收起（让地图视野更大）
     if (isMobile()) panelOpen.value = false;
 }
 
-/**
- * @func destroyMap
- * @desc 销毁
- */
-function destroyMap() {
-    if (!map.value) return;
-    markers.forEach((m) => m.remove());
-    markers.clear();
-    map.value.remove();
-    map.value = null;
+/** 右键菜单动作 */
+async function menuAction(type: "marker" | "address" | "center" | "coord") {
+    const latlng = menu.value.latlng;
+    if (!map.value || !latlng) return;
+
+    try {
+        if (type === "center") {
+            map.value.panTo(latlng);
+            return;
+        }
+
+        if (type === "marker") {
+            const mk = L.marker(latlng).addTo(map.value);
+            tempMarkers.push(mk);
+            mk.bindPopup(
+                `<div style="font-weight:800">临时标记</div>
+         <div style="color:#666;font-size:12px">${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}</div>`
+            );
+            mk.openPopup();
+            return;
+        }
+
+        if (type === "address") {
+            const url = new URL("https://nominatim.openstreetmap.org/reverse");
+            url.searchParams.set("format", "json");
+            url.searchParams.set("lat", String(latlng.lat));
+            url.searchParams.set("lon", String(latlng.lng));
+
+            const r = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+            const j = await r.json();
+            const name = j?.display_name || `${latlng.lat}, ${latlng.lng}`;
+
+            L.popup({ maxWidth: 320 })
+                .setLatLng(latlng)
+                .setContent(
+                    `<div style="font-weight:800;margin-bottom:6px">地址</div>
+           <div style="font-size:12px;line-height:1.4;color:#333">${esc(name)}</div>`
+                )
+                .openOn(map.value);
+            return;
+        }
+
+        if (type === "coord") {
+            const latTxt = latlng.lat.toFixed(6);
+            const lngTxt = latlng.lng.toFixed(6);
+            const text = `${latTxt}, ${lngTxt}`;
+
+            // 复制（能复制就复制，不能就不报错）
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch { }
+
+            L.popup({ maxWidth: 260 })
+                .setLatLng(latlng)
+                .setContent(
+                    `<div style="font-weight:800;margin-bottom:6px">坐标</div>
+           <div style="font-size:12px;line-height:1.5;color:#333">
+             Lat: ${latTxt}<br/>Lon: ${lngTxt}
+           </div>`
+                )
+                .openOn(map.value);
+            return;
+        }
+    } catch (e: any) {
+        console.error("[menuAction failed]", type, e?.message || e);
+        L.popup({ closeButton: true, autoClose: true })
+            .setLatLng(latlng)
+            .setContent(
+                `<div style="color:#e11d48;font-weight:800">操作失败</div>
+         <div style="font-size:12px;color:#666">${esc(e?.message || String(e))}</div>`
+            )
+            .openOn(map.value);
+    } finally {
+        closeMenu();
+    }
 }
 
-/**
- * @func initMap
- * @desc 初始化地图
- */
+function destroyMap() {
+    if (!map.value) return;
+
+    try {
+        // 停止一切正在进行的 pan/zoom 动画（核心）
+        map.value.stop();
+
+        // 关弹窗，避免 autoPan 还在跑
+        map.value.closePopup();
+    } catch { }
+
+    markers.forEach((m) => m.remove());
+    markers.clear();
+
+    tempMarkers.forEach((m) => m.remove());
+    tempMarkers = [];
+
+    try {
+        map.value.off();     // 清事件
+        map.value.remove();  // 真销毁
+    } finally {
+        map.value = null;
+    }
+}
+
+
 function initMap(container: HTMLDivElement) {
-    // 同容器重复初始化的兜底
     destroyMap();
 
-    // 如果容器上残留了 _leaflet_id，也清掉 （HMR/某些情况下 remove 之后还会残留）
     const anyEl = container as any;
     if (anyEl._leaflet_id) {
-        try { delete anyEl._leaflet_id; } catch { }
-        try { anyEl._leaflet_id = undefined; } catch { }
+        try {
+            delete anyEl._leaflet_id;
+        } catch { }
+        try {
+            anyEl._leaflet_id = undefined;
+        } catch { }
     }
-    // 你项目里如果需要自定义 zoomControl 位置也行
+
     map.value = L.map(container, { zoomControl: true }).setView([13.736, 100.523], 12);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
     }).addTo(map.value);
+
+    /** 右键菜单（桌面） */
+    map.value.on("contextmenu", (e: L.LeafletMouseEvent) => {
+        map.value?.closePopup();
+
+        const ev = e.originalEvent as MouseEvent;
+        const p = clampMenuToViewport(ev.pageX, ev.pageY);
+
+        menu.value.open = true;
+        menu.value.x = p.x;
+        menu.value.y = p.y;
+        menu.value.latlng = e.latlng;
+    });
+
+    /** 移动端长按（约 520ms）弹菜单 */
+    if ("ontouchstart" in window) {
+        let timer: any = null;
+
+        const cancel = () => {
+            if (timer) clearTimeout(timer);
+            timer = null;
+        };
+
+        map.value.on("touchstart", (e: any) => {
+            const t = e?.originalEvent?.touches?.[0];
+            if (!t) return;
+
+            timer = setTimeout(() => {
+                const p = clampMenuToViewport(t.pageX, t.pageY);
+                menu.value.open = true;
+                menu.value.x = p.x;
+                menu.value.y = p.y;
+                menu.value.latlng = e.latlng; // Leaflet 会给 touch 事件注入 latlng
+            }, 520);
+        });
+
+        map.value.on("touchmove", cancel);
+        map.value.on("touchend", cancel);
+        map.value.on("touchcancel", cancel);
+    }
+
+    // 地图交互时关闭菜单
+    map.value.on("click", closeMenu);
+    map.value.on("movestart", closeMenu);
+    map.value.on("zoomstart", closeMenu);
 }
 
 async function initial() {
@@ -313,44 +545,46 @@ async function initial() {
     initMap(container);
     await load();
 
-    // 初次渲染后让 Leaflet 重新计算尺寸（避免隐藏/切换造成错位）
     await nextTick();
     map.value?.invalidateSize();
 }
 
+/** 生命周期 / 监听 */
+let resizeTimer: any = null;
+
+function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(async () => {
+        await nextTick();
+        // 重算尺寸
+        map.value?.invalidateSize({ pan: false });
+    }, 120);
+}
+
+function onKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") closeMenu();
+}
+
 onMounted(() => {
-    initial()
+    initial();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("keydown", onKeydown);
 });
 
-// 折叠/展开会改变可视区域，Leaflet 需要重算尺寸
 watch(panelOpen, async () => {
     await nextTick();
     map.value?.invalidateSize();
 });
 
-// 横竖屏/窗口变化时也重算（移动端最常见的卡住/错位原因）
-let resizeTimer: any = null;
-function onResize() {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-        // map.value?.invalidateSize();
-        initial();
-    }, 120);
-}
-
-window.addEventListener("resize", onResize);
-
 onBeforeUnmount(() => {
     window.removeEventListener("resize", onResize);
-    markers.forEach((m) => m.remove());
-    markers.clear();
-    map.value?.remove();
-    map.value = null;
+    window.removeEventListener("keydown", onKeydown);
+    destroyMap();
 });
 </script>
 
 <style>
-/* popup 内容不在 Vue 组件 DOM 内，UnoCSS 不会扫到它 => 用少量全局 CSS */
+/* popup 内容不在 Vue DOM 内，UnoCSS 不会扫到 => 少量全局 CSS */
 
 /* 桌面默认：卡片宽一点 */
 .poi-card {
@@ -434,36 +668,28 @@ onBeforeUnmount(() => {
     margin: 12px;
 }
 
-/* ===========================
-   移动端弹窗瘦身适配
-   =========================== */
+/* 移动端弹窗瘦身适配 */
 @media (max-width: 768px) {
-
-    /* 卡片不写死宽度，跟随 popup-content 宽度 */
     .poi-card {
         width: 100% !important;
         max-width: 100% !important;
     }
 
-    /* 图片缩矮，避免占屏 */
     .poi-img,
     .poi-img-fallback {
         height: 92px !important;
     }
 
-    /* 标题稍微小一点 */
     .poi-title {
         font-size: 16px !important;
         line-height: 1.25 !important;
     }
 
-    /* meta/status 手机隐藏（最省空间） */
     .poi-meta,
     .poi-statusline {
         display: none !important;
     }
 
-    /* 地址最多两行 */
     .poi-addr {
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -471,7 +697,6 @@ onBeforeUnmount(() => {
         overflow: hidden;
     }
 
-    /* popup 本体宽度限制一下（防止撑出屏幕） */
     .leaflet-popup-content {
         margin: 10px !important;
         max-width: calc(100vw - 40px);
@@ -509,7 +734,6 @@ onBeforeUnmount(() => {
     display: none !important;
 }
 
-/* 移动端更紧凑 */
 @media (max-width: 768px) {
     .poi-label .leaflet-tooltip-content {
         max-width: 140px;
@@ -520,5 +744,53 @@ onBeforeUnmount(() => {
 
 .poi-label {
     transform: translateY(2px);
+}
+
+/* OSM 风格右键菜单 */
+.context-menu {
+    position: absolute;
+    width: 220px;
+    background: rgba(20, 20, 20, 0.96);
+    color: #fff;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(6px);
+}
+
+.cm-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 10px;
+    text-align: left;
+    font-size: 13px;
+}
+
+.cm-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.cm-item:active {
+    transform: scale(0.99);
+}
+
+.cm-ico {
+    width: 18px;
+    display: inline-flex;
+    justify-content: center;
+    opacity: 0.95;
+}
+
+.cm-sep {
+    height: 1px;
+    margin: 6px 4px;
+    background: rgba(255, 255, 255, 0.12);
 }
 </style>
