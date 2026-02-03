@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, ref, watch, nextTick } from "vue";
+import { onMounted, onBeforeUnmount, ref, watch, nextTick, shallowRef, markRaw } from "vue";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Franchise } from "@/data/franchise";
@@ -129,12 +129,20 @@ type Store = {
 const mapElDesktop = ref<HTMLDivElement | null>(null);
 const mapElMobile = ref<HTMLDivElement | null>(null);
 
-const map = ref<L.Map | null>(null) as any;
-const markers = new Map<string, L.Marker>();
+const map = shallowRef<L.Map | null>(null);
 
+// 图层控制相关
+let layerCtrl: L.Control.Layers | null = null;
+// 门店层
+let storeLayer: L.LayerGroup | null = null;
+// 临时标记层
+let tempLayer: L.LayerGroup | null = null;
+
+const markers = new Map<string, L.Marker>();
 const stores = ref<Store[]>([]);
 const keyword = ref("");
 const panelOpen = ref(true);
+const mapReady = ref(false);
 
 /** 右键菜单状态 */
 const menu = ref({
@@ -144,6 +152,7 @@ const menu = ref({
     latlng: null as null | L.LatLng,
 });
 
+// 你原来留着也行（但真正清理靠 tempLayer.clearLayers）
 let tempMarkers: L.Marker[] = [];
 
 function isMobile() {
@@ -157,7 +166,7 @@ function closeMenu() {
 function clampMenuToViewport(x: number, y: number) {
     const padding = 8;
     const w = 220;
-    const h = 250; // 你这版菜单高度大约 240~260，给个安全值
+    const h = 250;
     const maxX = window.innerWidth - w - padding;
     const maxY = window.innerHeight - h - padding;
     return {
@@ -288,8 +297,7 @@ function buildPopupHtml(s: Store) {
     <div class="poi-media">
       ${first
             ? `<img class="poi-img" src="${esc(first)}" alt="${esc(s.nameZh)}" loading="lazy" />`
-            : `<div class="poi-img-fallback">暂无宣传图</div>`
-        }
+            : `<div class="poi-img-fallback">暂无宣传图</div>`}
     </div>
 
     <div class="poi-body">
@@ -308,23 +316,22 @@ function isDesktopHover() {
 
 function setMarkerTooltipOpacity(m: L.Marker, opacity: "0" | "1") {
     const tip = m.getTooltip();
-    // Leaflet v1.9+：tooltip.getElement() 可拿到 DOM
     const el = (tip as any)?.getElement?.() as HTMLElement | undefined;
     if (el) el.style.opacity = opacity;
 }
 
 function renderMarkers() {
-    markers.forEach((m) => m.remove());
+    // 清空门店图层（不要逐个 remove）
+    storeLayer?.clearLayers();
     markers.clear();
-    if (!map.value) return;
+    if (!map.value || !storeLayer) return;
 
     const hoverable = isDesktopHover();
     const mobile = isMobile();
 
     for (const s of stores.value) {
-        const m = L.marker([s.lat, s.lng]).addTo(map.value);
+        const m = L.marker([s.lat, s.lng]).addTo(storeLayer);
 
-        // 永久显示名字
         m.bindTooltip(s.nameZh, {
             permanent: true,
             direction: "bottom",
@@ -345,7 +352,6 @@ function renderMarkers() {
             offset: mobile ? [0, 18] : [0, 10],
         });
 
-        // popup 打开时隐藏 label，关闭恢复
         m.on("popupopen", () => setMarkerTooltipOpacity(m, "0"));
         m.on("popupclose", () => setMarkerTooltipOpacity(m, "1"));
 
@@ -357,7 +363,6 @@ function renderMarkers() {
         markers.set(s.id, m);
     }
 
-    // 自动 fitBounds
     if (stores.value.length > 0) {
         const latlngs = stores.value.map((s) => [s.lat, s.lng] as [number, number]);
         map.value.fitBounds(latlngs, { padding: [30, 30] });
@@ -365,8 +370,16 @@ function renderMarkers() {
 }
 
 function focus(s: Store) {
-    map.value?.setView([s.lat, s.lng], 16);
-    markers.get(s.id)?.openPopup();
+    if (!mapReady.value) return;
+    const m = map.value as any;
+    if (!m) return;                 // 防止 map 已销毁/未初始化
+    if (!m._loaded) return;         // Leaflet 还没 ready 时也别操作
+
+    m.setView([s.lat, s.lng], 16, { animate: true });
+
+    const mk = markers.get(s.id);
+    if (mk) mk.openPopup();
+
     if (isMobile()) panelOpen.value = false;
 }
 
@@ -382,11 +395,12 @@ async function menuAction(type: "marker" | "address" | "center" | "coord") {
         }
 
         if (type === "marker") {
-            const mk = L.marker(latlng).addTo(map.value);
-            tempMarkers.push(mk);
+            if (!tempLayer) return;
+
+            const mk = L.marker(latlng).addTo(tempLayer); // 加到临时标记层
             mk.bindPopup(
                 `<div style="font-weight:800">临时标记</div>
-         <div style="color:#666;font-size:12px">${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}</div>`
+                <div style="color:#666;font-size:12px">${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}</div>`
             );
             mk.openPopup();
             return;
@@ -417,7 +431,6 @@ async function menuAction(type: "marker" | "address" | "center" | "coord") {
             const lngTxt = latlng.lng.toFixed(6);
             const text = `${latTxt}, ${lngTxt}`;
 
-            // 复制（能复制就复制，不能就不报错）
             try {
                 await navigator.clipboard.writeText(text);
             } catch { }
@@ -448,95 +461,103 @@ async function menuAction(type: "marker" | "address" | "center" | "coord") {
 }
 
 function destroyMap() {
+    mapReady.value = false;
     if (!map.value) return;
 
     try {
-        // 停止一切正在进行的 pan/zoom 动画（核心）
         map.value.stop();
-
-        // 关弹窗，避免 autoPan 还在跑
         map.value.closePopup();
     } catch { }
 
-    markers.forEach((m) => m.remove());
-    markers.clear();
+    // 清理控件
+    try {
+        layerCtrl?.remove();
+    } catch { }
+    layerCtrl = null;
 
-    tempMarkers.forEach((m) => m.remove());
+    // 清理图层
+    try {
+        storeLayer?.clearLayers();
+        tempLayer?.clearLayers();
+    } catch { }
+    storeLayer = null;
+    tempLayer = null;
+
+    // 兼容你原来的数组
     tempMarkers = [];
 
     try {
-        map.value.off();     // 清事件
-        map.value.remove();  // 真销毁
+        map.value.off();
+        map.value.remove();
     } finally {
         map.value = null;
     }
-}
 
+    markers.clear();
+}
 
 function initMap(container: HTMLDivElement) {
     destroyMap();
 
     const anyEl = container as any;
     if (anyEl._leaflet_id) {
-        try {
-            delete anyEl._leaflet_id;
-        } catch { }
-        try {
-            anyEl._leaflet_id = undefined;
-        } catch { }
+        try { delete anyEl._leaflet_id; } catch { }
+        try { anyEl._leaflet_id = undefined; } catch { }
     }
 
-    map.value = L.map(container, { zoomControl: true }).setView([13.736, 100.523], 12);
+    const m = markRaw(L.map(container, { zoomControl: true }).setView([13.736, 100.523], 12));
+    map.value = m;
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    // 底图
+    const osm = markRaw(L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap",
-    }).addTo(map.value);
+    }));
 
-    /** 右键菜单（桌面） */
-    map.value.on("contextmenu", (e: L.LeafletMouseEvent) => {
-        map.value?.closePopup();
+    const cartoPositron = markRaw(L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        attribution: "© OpenStreetMap © CARTO",
+    }));
 
+    const cartoVoyager = markRaw(L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        attribution: "© OpenStreetMap © CARTO",
+    }));
+
+    cartoVoyager.addTo(m);
+
+    const baseLayers: Record<string, L.TileLayer> = {
+        "标准 OSM": osm,
+        "浅色（推荐）": cartoPositron,
+        "彩色（推荐）": cartoVoyager,
+    };
+
+    // 覆盖层
+    storeLayer = markRaw(L.layerGroup().addTo(m));
+    tempLayer = markRaw(L.layerGroup().addTo(m));
+
+    const overlays: Record<string, L.Layer> = {
+        "门店": storeLayer,
+        "临时标记": tempLayer,
+    };
+
+    layerCtrl = markRaw(L.control.layers(baseLayers, overlays, { position: "topright" }).addTo(m));
+
+    // 事件
+    m.on("contextmenu", (e: L.LeafletMouseEvent) => {
+        m.closePopup();
         const ev = e.originalEvent as MouseEvent;
         const p = clampMenuToViewport(ev.pageX, ev.pageY);
-
         menu.value.open = true;
         menu.value.x = p.x;
         menu.value.y = p.y;
         menu.value.latlng = e.latlng;
     });
 
-    /** 移动端长按（约 520ms）弹菜单 */
-    if ("ontouchstart" in window) {
-        let timer: any = null;
+    m.on("click", closeMenu);
+    m.on("movestart", closeMenu);
+    m.on("zoomstart", closeMenu);
 
-        const cancel = () => {
-            if (timer) clearTimeout(timer);
-            timer = null;
-        };
-
-        map.value.on("touchstart", (e: any) => {
-            const t = e?.originalEvent?.touches?.[0];
-            if (!t) return;
-
-            timer = setTimeout(() => {
-                const p = clampMenuToViewport(t.pageX, t.pageY);
-                menu.value.open = true;
-                menu.value.x = p.x;
-                menu.value.y = p.y;
-                menu.value.latlng = e.latlng; // Leaflet 会给 touch 事件注入 latlng
-            }, 520);
-        });
-
-        map.value.on("touchmove", cancel);
-        map.value.on("touchend", cancel);
-        map.value.on("touchcancel", cancel);
-    }
-
-    // 地图交互时关闭菜单
-    map.value.on("click", closeMenu);
-    map.value.on("movestart", closeMenu);
-    map.value.on("zoomstart", closeMenu);
+    mapReady.value = true;
 }
+
 
 async function initial() {
     const container = isMobile() ? mapElMobile.value : mapElDesktop.value;
@@ -556,7 +577,6 @@ function onResize() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(async () => {
         await nextTick();
-        // 重算尺寸
         map.value?.invalidateSize({ pan: false });
     }, 120);
 }
@@ -582,6 +602,7 @@ onBeforeUnmount(() => {
     destroyMap();
 });
 </script>
+
 
 <style>
 /* popup 内容不在 Vue DOM 内，UnoCSS 不会扫到 => 少量全局 CSS */

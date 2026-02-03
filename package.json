@@ -31,7 +31,6 @@
     "hash.js": "1.1.7",
     "isomorphic-dompurify": "2.26.0",
     "leaflet": "^1.9.4",
-    "maplibre-gl": "^5.17.0",
     "node-cron": "4.2.1",
     "pako": "2.1.0",
     "pinia": "3.0.3",
