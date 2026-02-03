@@ -1,0 +1,15 @@
+---
+import ErrorBoundary from "@/components/ErrorBoundary.vue";
+import FranchiseMap from "@/components/FranchiseMap.vue";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+
+const title = "易换官网-地图";
+---
+
+<BaseLayout {title}>
+    <section class="mt-10">
+        <ErrorBoundary>
+            <FranchiseMap client:only="vue" />
+        </ErrorBoundary>
+    </section>
+</BaseLayout>

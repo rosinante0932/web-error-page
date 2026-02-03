@@ -53,8 +53,8 @@ function cachedKvGet(k: string) {
   return p;
 }
 
-// ✅ 并发拉取两个 key（一次渲染拿全）
-// ✅ 失败兜底：不阻塞页面渲染
+// 并发拉取两个 key（一次渲染拿全）
+// 失败兜底：不阻塞页面渲染
 let kv: KvRes = {};
 try {
   const [tgRes, chatRes] = await Promise.all([
@@ -264,6 +264,11 @@ const hoverArrow = "group-hover:opacity-100 opacity-0";
 
         <div class={navGroup}>
           <a href={href("/qa")} data-nav="/qa" class={navLink}>常见问题</a>
+          <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
+        </div>
+
+        <div class={navGroup}>
+          <a href={href("/map")} data-nav="/map" class={navLink}>地图</a>
           <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
         </div>
       </div>

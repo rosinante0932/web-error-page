@@ -57,8 +57,22 @@ export default defineConfig({
       }
     },
     build: {
+      target: 'es2024',
       commonjsOptions: { transformMixedEsModules: true }
     },
+
+    // ✅ 2) 关键：开发模式依赖预构建 target（不加这个你就会继续中招）
+    optimizeDeps: {
+      esbuildOptions: {
+        target: 'es2024', // 或 'esnext'
+      },
+    },
+
+    // ✅ 3) 保险：Vite 内部 esbuild 转换 target（可选但建议）
+    esbuild: {
+      target: 'es2024', // 或 'esnext'
+    },
+
     plugins: [
       AutoImport({
         // 这里既可以导入函数，也可以导入“type 类型”

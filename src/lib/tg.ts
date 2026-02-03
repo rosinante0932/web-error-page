@@ -18,7 +18,7 @@ const SIG_COOLDOWN_MS = 60_000;
 let globalWinStart = 0;
 let globalCount = 0;
 
-// ✅ 只保留 lastSentAt，不需要 suppressed/timer
+// 只保留 lastSentAt，不需要 suppressed/timer
 type SigState = { lastSentAt: number };
 const sigMap = new Map<string, SigState>();
 

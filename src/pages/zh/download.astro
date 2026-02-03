@@ -3,6 +3,7 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 import "@/assets/css/initial.css";
 import Qrcode from "@/components/Qrcode.vue";
 import DeviceDownload from "@/components/DeviceDownload.vue";
+import ErrorBoundary from "@/components/ErrorBoundary.vue";
 
 const title = "易换官网 - 应用下载";
 
@@ -26,8 +27,7 @@ const qrcodeUrl = downloadLink;
 
 const qrcodeBox =
   "w-[160px] h-[160px] bg-[#fff] flex items-center justify-center mt-[20px]";
-const h5Btn =
-  "bg-[#4583fe] w-100% py-3 rounded text-[#fff] text-sm";
+const h5Btn = "bg-[#4583fe] w-100% py-3 rounded text-[#fff] text-sm";
 ---
 
 <BaseLayout {title}>
@@ -41,7 +41,11 @@ const h5Btn =
       class="grid grid-cols-2 gap-20 bg-[length:710px_710px] bg-right bg-no-repeat bg-[url(/assets/download/02.png)]"
     >
       <ul class="flex items-center justify-center flex-col">
-        <img src="/assets/yhicon.png" alt="易换" class="w-[124px] h-[124px] mb-[40px]" />
+        <img
+          src="/assets/yhicon.png"
+          alt="易换"
+          class="w-[124px] h-[124px] mb-[40px]"
+        />
 
         <h2 class="text-[#147ff2]">
           <span class="text-[#147ff2] text-[36px] font-600">
@@ -53,14 +57,18 @@ const h5Btn =
           上百种货币通兑·特有黄金交付·极速到账
         </h3>
 
-        <h4 class="text-[#141414] text-[16px]">请用手机扫描下方二维码下载APP</h4>
+        <h4 class="text-[#141414] text-[16px]">
+          请用手机扫描下方二维码下载APP
+        </h4>
 
-        <Qrcode
-          client:only
-          url={qrcodeUrl}
-          size={140}
-          className={qrcodeBox}
-        />
+        <ErrorBoundary>
+          <Qrcode
+            client:only
+            url={qrcodeUrl}
+            size={140}
+            className={qrcodeBox}
+          />
+        </ErrorBoundary>
       </ul>
 
       <ul class="relative h-[750px] left-[-50px]">
@@ -69,12 +77,36 @@ const h5Btn =
           alt=""
           class="h-[788px] absolute top-0 left-[50%] translate-x-[-50%]"
         />
-        <img src="/assets/download/03.png" alt="" class="absolute top-[85px] left-[25px] h-[70px]" />
-        <img src="/assets/download/04.png" alt="" class="absolute bottom-[65px] right-[40px] h-[80px]" />
-        <img src="/assets/download/05.png" alt="" class="absolute bottom-[380px] right-[-110px] h-[130px]" />
-        <img src="/assets/download/06.png" alt="" class="absolute bottom-[150px] right-[-80px] h-[130px]" />
-        <img src="/assets/download/07.png" alt="" class="absolute bottom-[280px] left-[-80px] h-[130px]" />
-        <img src="/assets/download/08.png" alt="" class="absolute bottom-[50px] left-[-120px] h-[130px]" />
+        <img
+          src="/assets/download/03.png"
+          alt=""
+          class="absolute top-[85px] left-[25px] h-[70px]"
+        />
+        <img
+          src="/assets/download/04.png"
+          alt=""
+          class="absolute bottom-[65px] right-[40px] h-[80px]"
+        />
+        <img
+          src="/assets/download/05.png"
+          alt=""
+          class="absolute bottom-[380px] right-[-110px] h-[130px]"
+        />
+        <img
+          src="/assets/download/06.png"
+          alt=""
+          class="absolute bottom-[150px] right-[-80px] h-[130px]"
+        />
+        <img
+          src="/assets/download/07.png"
+          alt=""
+          class="absolute bottom-[280px] left-[-80px] h-[130px]"
+        />
+        <img
+          src="/assets/download/08.png"
+          alt=""
+          class="absolute bottom-[50px] left-[-120px] h-[130px]"
+        />
       </ul>
     </div>
   </section>
@@ -100,13 +132,41 @@ const h5Btn =
             loading="lazy"
             class="w-[70%] mx-auto relative z-1"
           />
-          <img src="/assets/download/02.png" alt="" class="absolute top-50% translate-y-[-50%]" />
-          <img src="/assets/download/03.png" alt="" class="absolute top-32 left-0 w-20" />
-          <img src="/assets/download/04.png" alt="" class="absolute bottom-32 right-0 w-16" />
-          <img src="/assets/download/05.png" alt="" class="absolute top-34 right-10 z-2 h-20" />
-          <img src="/assets/download/06.png" alt="" class="absolute top-54 right-0 z-2 h-20" />
-          <img src="/assets/download/07.png" alt="" class="absolute bottom-32 left-0 z-2 h-20" />
-          <img src="/assets/download/08.png" alt="" class="absolute bottom-10 left-6 z-2 h-20" />
+          <img
+            src="/assets/download/02.png"
+            alt=""
+            class="absolute top-50% translate-y-[-50%]"
+          />
+          <img
+            src="/assets/download/03.png"
+            alt=""
+            class="absolute top-32 left-0 w-20"
+          />
+          <img
+            src="/assets/download/04.png"
+            alt=""
+            class="absolute bottom-32 right-0 w-16"
+          />
+          <img
+            src="/assets/download/05.png"
+            alt=""
+            class="absolute top-34 right-10 z-2 h-20"
+          />
+          <img
+            src="/assets/download/06.png"
+            alt=""
+            class="absolute top-54 right-0 z-2 h-20"
+          />
+          <img
+            src="/assets/download/07.png"
+            alt=""
+            class="absolute bottom-32 left-0 z-2 h-20"
+          />
+          <img
+            src="/assets/download/08.png"
+            alt=""
+            class="absolute bottom-10 left-6 z-2 h-20"
+          />
         </picture>
 
         <a href={downloadLink} class="w-100% px-4">
@@ -114,7 +174,9 @@ const h5Btn =
         </a>
       </ul>
 
-      <DeviceDownload client:only="vue" />
+      <ErrorBoundary>
+        <DeviceDownload client:only="vue" />
+      </ErrorBoundary>
     </div>
   </div>
 </BaseLayout>

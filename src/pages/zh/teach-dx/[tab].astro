@@ -36,7 +36,7 @@ const hrefOf = (key: string) => `${BASE_ROUTE}/${key}`;
 const { tab } = Astro.params;
 const current = TABS.find((t) => t.key === tab);
 
-// ✅ SSR：非法 tab 直接 302 到默认 tab
+// SSR：非法 tab 直接 302 到默认 tab
 if (!current) {
   return Astro.redirect(hrefOf(TABS[0].key), 302);
 }
@@ -180,7 +180,7 @@ const images = Array.from({ length: current.count }, (_, i) => {
         var active = nav.querySelector('a[data-key="' + CSS.escape(tab) + '"]');
         if (!active) return;
 
-        // ✅ 稳：offsetLeft/offsetWidth 计算居中
+        // offsetLeft/offsetWidth 计算居中
         var left = active.offsetLeft + active.offsetWidth / 2 - nav.clientWidth / 2;
         nav.scrollTo({ left: Math.max(0, left), behavior: "auto" });
       }
