@@ -1,0 +1,1076 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>门店地图</title>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- MarkerCluster -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <!-- LocateControl（和你原来 window.L.control.locate 对应） -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol@0.81.0/dist/L.Control.Locate.min.css" />
+    <script src="https://unpkg.com/leaflet.locatecontrol@0.81.0/dist/L.Control.Locate.min.js"></script>
+
+    <style>
+        /* ====== 基础布局（替代 Tailwind）====== */
+        :root {
+            --bg: #EEF3FF;
+            --border: #e5e7eb;
+            --text: #111827;
+            --muted: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        .wrap {
+            height: 100vh;
+            position: relative;
+            background: var(--bg);
+        }
+
+        @media (min-width: 768px) {
+            .wrap {
+                height: 600px;
+                min-height: 600px;
+            }
+        }
+
+        /* 桌面：左右两栏 */
+        .desktop {
+            display: none;
+            height: 100%;
+        }
+
+        @media (min-width:768px) {
+            .desktop {
+                display: grid;
+                grid-template-columns: 320px 1fr;
+            }
+        }
+
+        /* 移动：上下布局 */
+        .mobile {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        @media (min-width:768px) {
+            .mobile {
+                display: none;
+            }
+        }
+
+        .aside {
+            background: #fff;
+            height: 100%;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .input {
+            flex: 1;
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            outline: none;
+        }
+
+        .input:focus {
+            border-color: #9ca3af;
+        }
+
+        .btn {
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #fff;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .list {
+            padding: 8px;
+            overflow: auto;
+        }
+
+        .item {
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .item:hover {
+            background: #f9fafb;
+        }
+
+        .item:active {
+            background: #f3f4f6;
+        }
+
+        .name {
+            font-weight: 800;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+
+        .addr {
+            margin-top: 4px;
+            font-size: 12px;
+            line-height: 1.35;
+            color: var(--muted);
+        }
+
+        .empty {
+            padding: 12px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        /* 移动顶部卡片 */
+        .m-top {
+            padding: 12px 12px 0 12px;
+        }
+
+        .m-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .m-list {
+            padding: 8px;
+            overflow: auto;
+            max-height: 42vh;
+        }
+
+        /* 地图容器 */
+        .map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .m-map-wrap {
+            flex: 1;
+            padding: 12px;
+            padding-top: 12px;
+        }
+
+        .m-map-box {
+            height: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+
+        .d-map {
+            height: 100%;
+        }
+
+        /* 右键菜单覆盖层 */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+        }
+
+        .overlay.open {
+            display: block;
+        }
+
+        .context-menu {
+            position: absolute;
+            width: 220px;
+            background: rgba(20, 20, 20, 0.96);
+            color: #fff;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(6px);
+        }
+
+        .cm-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 10px;
+            border: 0;
+            background: transparent;
+            color: #fff;
+            cursor: pointer;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .cm-item:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .cm-item:active {
+            transform: scale(0.99);
+        }
+
+        .cm-ico {
+            width: 18px;
+            display: inline-flex;
+            justify-content: center;
+            opacity: 0.95;
+        }
+
+        .cm-sep {
+            height: 1px;
+            margin: 6px 4px;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* ====== 你原来的 Popup / Tooltip 全局样式 ====== */
+        .poi-card {
+            width: 340px;
+            max-width: 340px;
+        }
+
+        .poi-media {
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f3f4f6;
+        }
+
+        .poi-img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.18s ease;
+        }
+
+        .poi-card:hover .poi-img {
+            transform: scale(1.02);
+        }
+
+        .poi-img-fallback {
+            height: 150px;
+            display: grid;
+            place-items: center;
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .poi-body {
+            padding: 10px 2px 0 2px;
+        }
+
+        .poi-title {
+            font-weight: 800;
+            font-size: 18px;
+            line-height: 1.2;
+        }
+
+        .poi-meta {
+            margin-top: 6px;
+            color: #444;
+            font-size: 13px;
+        }
+
+        .poi-statusline {
+            margin-top: 6px;
+            font-size: 13px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .poi-status {
+            color: #e11d48;
+            font-weight: 700;
+        }
+
+        .poi-openhint {
+            color: #444;
+        }
+
+        .poi-addr {
+            margin-top: 6px;
+            color: #666;
+            font-size: 13px;
+            line-height: 1.35;
+        }
+
+        .leaflet-popup-content-wrapper {
+            border-radius: 16px;
+        }
+
+        .leaflet-popup-content {
+            margin: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .poi-card {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
+            .poi-img,
+            .poi-img-fallback {
+                height: 92px !important;
+            }
+
+            .poi-title {
+                font-size: 16px !important;
+                line-height: 1.25 !important;
+            }
+
+            .poi-meta,
+            .poi-statusline {
+                display: none !important;
+            }
+
+            .poi-addr {
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .leaflet-popup-content {
+                margin: 10px !important;
+                max-width: calc(100vw - 40px);
+            }
+        }
+
+        .poi-label {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            transform: translateY(2px);
+        }
+
+        .poi-label .leaflet-tooltip-content {
+            display: inline-block;
+            max-width: 180px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 12px;
+            font-weight: 800;
+            color: #111;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 999px;
+            padding: 4px 8px;
+        }
+
+        .poi-label.leaflet-tooltip-top::before {
+            display: none !important;
+        }
+
+        @media (max-width:768px) {
+            .poi-label .leaflet-tooltip-content {
+                max-width: 140px;
+                font-size: 11px;
+                padding: 3px 7px;
+            }
+        }
+
+        /* =========================
+   Leaflet 控件 · 统一美化
+   ========================= */
+
+        /* 控件整体不要自带边框 */
+        .leaflet-control {
+            box-shadow: none !important;
+            border: none !important;
+        }
+
+        /* 所有按钮统一为“白色胶囊卡片” */
+        .leaflet-control a,
+        .leaflet-control-layers-toggle {
+            width: 36px !important;
+            height: 36px !important;
+            line-height: 36px !important;
+
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            border: none !important;
+            border-radius: 12px !important;
+
+            /* 关键：干净的轻阴影 */
+            box-shadow:
+                0 1px 2px rgba(0, 0, 0, 0.08),
+                0 4px 12px rgba(0, 0, 0, 0.08) !important;
+        }
+
+        /* hover 更“高级”的反馈 */
+        .leaflet-control a:hover,
+        .leaflet-control-layers-toggle:hover {
+            background: #f8fafc !important;
+        }
+
+        /* active 轻微按压感 */
+        .leaflet-control a:active,
+        .leaflet-control-layers-toggle:active {
+            transform: scale(0.96);
+        }
+
+        /* 去掉 zoom + / - 中间那条难看的分割线 */
+        .leaflet-control-zoom a:first-child {
+            border-bottom: none !important;
+        }
+
+        /* layers 图标居中 & 尺寸统一 */
+        .leaflet-control-layers-toggle {
+            background-position: center !important;
+            background-size: 20px 20px !important;
+        }
+
+        /* locate 插件里的箭头图标 */
+        .leaflet-control-locate a {
+            font-size: 18px;
+        }
+
+        /* 控件之间留点呼吸感 */
+        .leaflet-control>a+a {
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <!-- ===== Desktop ===== -->
+        <div class="desktop">
+            <aside class="aside">
+                <div class="row">
+                    <input id="kwDesk" class="input" placeholder="搜索中文店铺" />
+                    <button id="toggleDesk" class="btn">收起</button>
+                </div>
+                <div id="listDesk" class="list"></div>
+            </aside>
+            <div id="mapDesk" class="d-map"></div>
+        </div>
+
+        <!-- ===== Mobile ===== -->
+        <div class="mobile">
+            <div class="m-top">
+                <div class="m-card">
+                    <div class="row">
+                        <input id="kwMob" class="input" placeholder="搜索中文店铺" />
+                        <button id="toggleMob" class="btn">收起</button>
+                    </div>
+                    <div id="listMob" class="m-list"></div>
+                </div>
+            </div>
+
+            <div class="m-map-wrap">
+                <div class="m-map-box">
+                    <div id="mapMob" class="map"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右键菜单 -->
+        <div id="overlay" class="overlay">
+            <div id="cm" class="context-menu">
+                <button class="cm-item" data-act="marker"><span class="cm-ico">📍</span>在此添加注记</button>
+                <button class="cm-item" data-act="address"><span class="cm-ico">🧭</span>显示地址</button>
+                <button class="cm-item" data-act="coord"><span class="cm-ico">📌</span>显示坐标</button>
+                <div class="cm-sep"></div>
+                <button class="cm-item" data-act="center"><span class="cm-ico">◎</span>将此处置于地图中间</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /** ========= state ========= */
+        const state = {
+            map: null,
+            layerCtrl: null,
+            storeLayer: null,   // markerClusterGroup
+            tempLayer: null,    // layerGroup
+            markers: new Map(),
+            stores: [],
+            keyword: "",
+            panelOpen: true,
+            mapReady: false,
+            menu: { open: false, x: 0, y: 0, latlng: null },
+            resizeTimer: null,
+            hoverable: false,
+        };
+
+        /** ========= utils ========= */
+        function isMobile() {
+            return window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+        }
+
+        function esc(v) {
+            const s = String(v ?? "");
+            return s
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function parseGoogleMapsLatLng(url) {
+            const u = String(url || "").trim();
+            if (!u) return null;
+
+            const m1 = u.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+            if (m1) return { lat: Number(m1[1]), lng: Number(m1[2]), source: "3d4d", confidence: "high" };
+
+            const mq = u.match(/[?&](?:q|query)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+            if (mq) return { lat: Number(mq[1]), lng: Number(mq[2]), source: "q", confidence: "mid" };
+
+            const m2 = u.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+            if (m2) return { lat: Number(m2[1]), lng: Number(m2[2]), source: "at", confidence: "low" };
+
+            return null;
+        }
+
+        function buildPopupHtml(s) {
+            const first = Array.isArray(s.images) && s.images.length ? String(s.images[0].url || "") : "";
+
+            const metaLine = [
+                typeof s.rating === "number" ? `⭐ ${s.rating.toFixed(1)}` : "",
+                typeof s.reviews === "number" ? `(${s.reviews})` : "",
+                s.categoryZh ? esc(s.categoryZh) : "",
+                s.priceTextZh ? esc(s.priceTextZh) : "",
+            ].filter(Boolean).join(" ");
+
+            const statusLine = [
+                s.statusZh ? `<span class="poi-status">${esc(s.statusZh)}</span>` : "",
+                s.openTimeHintZh ? `<span class="poi-openhint">${esc(s.openTimeHintZh)}</span>` : "",
+            ].filter(Boolean).join(" · ");
+
+            return `
+        <div class="poi-card">
+          <div class="poi-media">
+            ${first
+                    ? `<img class="poi-img" src="${esc(first)}" alt="${esc(s.nameZh)}" loading="lazy" />`
+                    : `<div class="poi-img-fallback">暂无宣传图</div>`}
+          </div>
+
+          <div class="poi-body">
+            <div class="poi-title">${esc(s.nameZh)}</div>
+            ${metaLine ? `<div class="poi-meta">${metaLine}</div>` : ""}
+            ${statusLine ? `<div class="poi-statusline">${statusLine}</div>` : ""}
+            <div class="poi-addr">${esc(s.cityZh)} · ${esc(s.addressZh)}</div>
+          </div>
+        </div>
+      `;
+        }
+
+        function isDesktopHover() {
+            return window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches ?? false;
+        }
+
+        function setMarkerTooltipOpacity(m, opacity) {
+            const tip = m.getTooltip();
+            const el = tip?.getElement?.();
+            if (el) el.style.opacity = opacity;
+        }
+
+        /** ========= UI refs ========= */
+        const el = {
+            mapDesk: document.getElementById("mapDesk"),
+            mapMob: document.getElementById("mapMob"),
+            kwDesk: document.getElementById("kwDesk"),
+            kwMob: document.getElementById("kwMob"),
+            listDesk: document.getElementById("listDesk"),
+            listMob: document.getElementById("listMob"),
+            toggleDesk: document.getElementById("toggleDesk"),
+            toggleMob: document.getElementById("toggleMob"),
+            overlay: document.getElementById("overlay"),
+            cm: document.getElementById("cm"),
+        };
+
+        /** ========= menu ========= */
+        function clampMenuToViewport(x, y) {
+            const padding = 8;
+            const w = 220;
+            const h = 250;
+            const maxX = window.innerWidth - w - padding;
+            const maxY = window.innerHeight - h - padding;
+            return {
+                x: Math.max(padding, Math.min(x, maxX)),
+                y: Math.max(padding, Math.min(y, maxY)),
+            };
+        }
+
+        function closeMenu() {
+            state.menu.open = false;
+            el.overlay.classList.remove("open");
+        }
+
+        function openMenu(pageX, pageY, latlng) {
+            const p = clampMenuToViewport(pageX, pageY);
+            state.menu.open = true;
+            state.menu.x = p.x;
+            state.menu.y = p.y;
+            state.menu.latlng = latlng;
+
+            el.cm.style.left = p.x + "px";
+            el.cm.style.top = p.y + "px";
+            el.overlay.classList.add("open");
+        }
+
+        async function menuAction(type) {
+            const latlng = state.menu.latlng;
+            if (!state.map || !latlng) return;
+
+            try {
+                if (type === "center") {
+                    state.map.panTo(latlng);
+                    return;
+                }
+
+                if (type === "marker") {
+                    if (!state.tempLayer) return;
+                    const mk = L.marker(latlng).addTo(state.tempLayer);
+                    mk.bindPopup(
+                        `<div style="font-weight:800">临时标记</div>
+             <div style="color:#666;font-size:12px">${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}</div>`
+                    );
+                    mk.openPopup();
+                    return;
+                }
+
+                if (type === "address") {
+                    const url = new URL("https://nominatim.openstreetmap.org/reverse");
+                    url.searchParams.set("format", "json");
+                    url.searchParams.set("lat", String(latlng.lat));
+                    url.searchParams.set("lon", String(latlng.lng));
+
+                    const r = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+                    const j = await r.json();
+                    const name = j?.display_name || `${latlng.lat}, ${latlng.lng}`;
+
+                    L.popup({ maxWidth: 320 })
+                        .setLatLng(latlng)
+                        .setContent(
+                            `<div style="font-weight:800;margin-bottom:6px">地址</div>
+               <div style="font-size:12px;line-height:1.4;color:#333">${esc(name)}</div>`
+                        )
+                        .openOn(state.map);
+                    return;
+                }
+
+                if (type === "coord") {
+                    const latTxt = latlng.lat.toFixed(6);
+                    const lngTxt = latlng.lng.toFixed(6);
+                    const text = `${latTxt}, ${lngTxt}`;
+
+                    try { await navigator.clipboard.writeText(text); } catch { }
+
+                    L.popup({ maxWidth: 260 })
+                        .setLatLng(latlng)
+                        .setContent(
+                            `<div style="font-weight:800;margin-bottom:6px">坐标</div>
+               <div style="font-size:12px;line-height:1.5;color:#333">
+                 Lat: ${latTxt}<br/>Lon: ${lngTxt}
+               </div>`
+                        )
+                        .openOn(state.map);
+                    return;
+                }
+            } catch (e) {
+                console.error("[menuAction failed]", type, e?.message || e);
+                L.popup({ closeButton: true, autoClose: true })
+                    .setLatLng(latlng)
+                    .setContent(
+                        `<div style="color:#e11d48;font-weight:800">操作失败</div>
+             <div style="font-size:12px;color:#666">${esc(e?.message || String(e))}</div>`
+                    )
+                    .openOn(state.map);
+            } finally {
+                closeMenu();
+            }
+        }
+
+        /** ========= map lifecycle ========= */
+        function destroyMap() {
+            state.mapReady = false;
+            if (!state.map) return;
+
+            try { state.map.stop(); state.map.closePopup(); } catch { }
+
+            try { state.layerCtrl?.remove(); } catch { }
+            state.layerCtrl = null;
+
+            try { state.storeLayer?.clearLayers(); state.tempLayer?.clearLayers(); } catch { }
+            state.storeLayer = null;
+            state.tempLayer = null;
+
+            state.markers.clear();
+
+            try { state.map.off(); state.map.remove(); } finally { state.map = null; }
+        }
+
+        function initMap(container) {
+            destroyMap();
+
+            // 兼容 Leaflet 对同一 DOM 重建
+            const anyEl = container;
+            if (anyEl && anyEl._leaflet_id) {
+                try { delete anyEl._leaflet_id; } catch { }
+                try { anyEl._leaflet_id = undefined; } catch { }
+            }
+
+            const m = L.map(container, {
+                zoomControl: true,
+                maxZoom: 18,
+                minZoom: 10,
+            }).setView([13.736, 100.523], 12);
+
+            state.map = m;
+            state.hoverable = isDesktopHover();
+
+            // 比例尺
+            L.control.scale({ metric: true, imperial: false, position: "bottomleft" }).addTo(m);
+
+            // 定位控件（如果插件没加载，这里不会炸）
+            if (L.control && L.control.locate) {
+                L.control.locate({
+                    position: "topright",
+                    flyTo: true,
+                    showCompass: true,
+                    keepCurrentZoomLevel: false,
+                }).addTo(m);
+            } else {
+                console.warn("[locatecontrol] not found: L.control.locate");
+            }
+
+            // 底图
+            const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: "© OpenStreetMap",
+            });
+
+            const cartoPositron = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+                attribution: "© OpenStreetMap © CARTO",
+            });
+
+            const cartoVoyager = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+                attribution: "© OpenStreetMap © CARTO",
+            });
+
+            cartoVoyager.addTo(m);
+
+            const baseLayers = {
+                "标准 OSM": osm,
+                "浅色（推荐）": cartoPositron,
+                "彩色（推荐）": cartoVoyager,
+            };
+
+            // 覆盖层：门店 + 临时标记
+            state.storeLayer = L.markerClusterGroup({
+                chunkedLoading: true,
+                showCoverageOnHover: false,
+                maxClusterRadius: 60,
+                spiderfyOnMaxZoom: true,
+                disableClusteringAtZoom: 17,
+            }).addTo(m);
+
+            state.tempLayer = L.layerGroup().addTo(m);
+
+            state.layerCtrl = L.control.layers(baseLayers, {
+                "门店": state.storeLayer,
+                "临时标记": state.tempLayer,
+            }, { position: "topright" }).addTo(m);
+
+            // 事件
+            m.on("contextmenu", (e) => {
+                m.closePopup();
+                const ev = e.originalEvent;
+                openMenu(ev.pageX, ev.pageY, e.latlng);
+            });
+            m.on("click", closeMenu);
+            m.on("movestart", closeMenu);
+            m.on("zoomstart", closeMenu);
+
+            state.mapReady = true;
+        }
+
+        function renderMarkers() {
+            if (!state.map || !state.storeLayer) return;
+
+            state.storeLayer.clearLayers();
+            state.markers.clear();
+
+            const mobile = isMobile();
+
+            for (const s of state.stores) {
+                const m = L.marker([s.lat, s.lng]).addTo(state.storeLayer);
+
+                m.bindTooltip(s.nameZh, {
+                    permanent: true,
+                    direction: "bottom",
+                    offset: [0, 10],
+                    opacity: 1,
+                    interactive: false,
+                    className: "poi-label",
+                });
+
+                m.bindPopup(buildPopupHtml(s), {
+                    maxWidth: mobile ? 320 : 420,
+                    minWidth: mobile ? 220 : 260,
+                    closeButton: true,
+                    autoPan: true,
+                    autoPanPaddingTopLeft: mobile ? [12, 170] : [12, 12],
+                    autoPanPaddingBottomRight: mobile ? [12, 180] : [12, 160],
+                    className: "poi-popup",
+                    offset: mobile ? [0, 18] : [0, 10],
+                });
+
+                m.on("popupopen", () => setMarkerTooltipOpacity(m, "0"));
+                m.on("popupclose", () => setMarkerTooltipOpacity(m, "1"));
+
+                if (state.hoverable) {
+                    m.on("mouseover", () => m.openPopup());
+                    m.on("mouseout", () => m.closePopup());
+                }
+
+                state.markers.set(s.id, m);
+            }
+
+            if (state.stores.length > 0) {
+                const latlngs = state.stores.map(s => [s.lat, s.lng]);
+                state.map.fitBounds(latlngs, { padding: [30, 30] });
+            }
+        }
+
+        function focusStore(s) {
+            if (!state.mapReady || !state.map) return;
+            if (!state.map._loaded) return;
+
+            state.map.setView([s.lat, s.lng], 16, { animate: true });
+
+            const mk = state.markers.get(s.id);
+            if (mk) mk.openPopup();
+
+            if (isMobile()) setPanelOpen(false);
+        }
+
+        /** ========= list rendering ========= */
+        function renderList() {
+            const desk = [];
+            const mob = [];
+
+            for (const s of state.stores) {
+                const html = `
+          <div class="item" data-id="${esc(s.id)}">
+            <div class="name">${esc(s.nameZh)}</div>
+            <div class="addr">${esc(s.cityZh)} · ${esc(s.addressZh)}</div>
+          </div>
+        `;
+                desk.push(html);
+                mob.push(html.replace('class="name"', 'class="name" style="font-size:16px"'));
+            }
+
+            el.listDesk.innerHTML = desk.length ? desk.join("") : `<div class="empty">暂无结果</div>`;
+            el.listMob.innerHTML = mob.length ? mob.join("") : `<div class="empty">暂无结果</div>`;
+
+            // click bind（事件委托）
+            el.listDesk.onclick = (ev) => {
+                const item = ev.target.closest?.(".item");
+                const id = item?.getAttribute?.("data-id");
+                if (!id) return;
+                const s = state.stores.find(x => x.id === id);
+                if (s) focusStore(s);
+            };
+            el.listMob.onclick = (ev) => {
+                const item = ev.target.closest?.(".item");
+                const id = item?.getAttribute?.("data-id");
+                if (!id) return;
+                const s = state.stores.find(x => x.id === id);
+                if (s) focusStore(s);
+            };
+        }
+
+        /** ========= panel open/close ========= */
+        function setPanelOpen(open) {
+            state.panelOpen = !!open;
+
+            // 桌面列表
+            el.listDesk.style.display = open ? "block" : "none";
+            el.toggleDesk.textContent = open ? "收起" : "列表";
+
+            // 移动列表
+            el.listMob.style.display = open ? "block" : "none";
+            el.toggleMob.textContent = open ? "收起" : "列表";
+
+            // map invalidate
+            requestAnimationFrame(() => {
+                try { state.map?.invalidateSize({ pan: false }); } catch { }
+            });
+        }
+
+        /** ========= data load ========= */
+        async function load() {
+            const u = new URL("/api/franchise.json", window.location.origin);
+            u.searchParams.set("q", state.keyword || "");
+
+            const r = await fetch(u.toString());
+            if (!r.ok) {
+                const t = await r.text();
+                console.error("[franchise api failed]", r.status, r.url, t.slice(0, 200));
+                state.stores = [];
+                renderList();
+                renderMarkers();
+                return;
+            }
+
+            const j = await r.json();
+            const rawList = (j.list ?? []);
+
+            const parsed = [];
+            for (const item of rawList) {
+                const googleUrl = item.googleUrl || "";
+                const p = parseGoogleMapsLatLng(googleUrl);
+                if (!p) {
+                    console.warn("[skip] googleUrl missing/invalid:", item.id, googleUrl);
+                    continue;
+                }
+                if (p.confidence === "low") {
+                    console.warn("[skip] low confidence coord (@ center):", item.id, googleUrl);
+                    continue;
+                }
+                parsed.push({
+                    ...item,
+                    lat: p.lat,
+                    lng: p.lng,
+                    coordSource: p.source,
+                    confidence: p.confidence,
+                    googleUrl,
+                });
+            }
+
+            state.stores = parsed;
+            renderList();
+            renderMarkers();
+        }
+
+        /** ========= debounce input ========= */
+        function debounce(fn, ms) {
+            let t = null;
+            return (...args) => {
+                clearTimeout(t);
+                t = setTimeout(() => fn(...args), ms);
+            };
+        }
+
+        const onKeywordInput = debounce(() => {
+            load();
+        }, 150);
+
+        /** ========= resize ========= */
+        function onResize() {
+            clearTimeout(state.resizeTimer);
+            state.resizeTimer = setTimeout(() => {
+                try { state.map?.invalidateSize({ pan: false }); } catch { }
+            }, 120);
+        }
+
+        function onKeydown(e) {
+            if (e.key === "Escape") closeMenu();
+        }
+
+        /** ========= init ========= */
+        function initial() {
+            const container = isMobile() ? el.mapMob : el.mapDesk;
+            if (!container) return;
+
+            initMap(container);
+            load().finally(() => {
+                requestAnimationFrame(() => {
+                    try { state.map?.invalidateSize(); } catch { }
+                });
+            });
+        }
+
+        // menu overlay events
+        el.overlay.addEventListener("mousedown", closeMenu, { passive: true });
+        el.overlay.addEventListener("touchstart", closeMenu, { passive: true });
+        el.cm.addEventListener("mousedown", (e) => e.stopPropagation());
+        el.cm.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
+        el.cm.addEventListener("click", (e) => {
+            const btn = e.target.closest?.(".cm-item");
+            if (!btn) return;
+            const act = btn.getAttribute("data-act");
+            if (act) menuAction(act);
+        });
+
+        // panel toggle
+        el.toggleDesk.onclick = () => setPanelOpen(!state.panelOpen);
+        el.toggleMob.onclick = () => setPanelOpen(!state.panelOpen);
+
+        // keyword input sync
+        function setKeyword(v) {
+            state.keyword = String(v ?? "");
+            if (el.kwDesk.value !== state.keyword) el.kwDesk.value = state.keyword;
+            if (el.kwMob.value !== state.keyword) el.kwMob.value = state.keyword;
+        }
+        el.kwDesk.addEventListener("input", (e) => { setKeyword(e.target.value); onKeywordInput(); });
+        el.kwMob.addEventListener("input", (e) => { setKeyword(e.target.value); onKeywordInput(); });
+
+        // boot
+        window.addEventListener("resize", onResize);
+        window.addEventListener("keydown", onKeydown);
+
+        // 初始：默认展开列表
+        setPanelOpen(true);
+        initial();
+
+        // 如果横竖屏 / 断点切换（桌面<->移动），重建 map
+        let lastMobile = isMobile();
+        setInterval(() => {
+            const now = isMobile();
+            if (now !== lastMobile) {
+                lastMobile = now;
+                // 切换容器后 Leaflet 必须重建
+                initial();
+            }
+        }, 500);
+    </script>
+</body>
+
+</html>

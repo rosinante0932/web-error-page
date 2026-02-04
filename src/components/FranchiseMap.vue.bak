@@ -1,5 +1,96 @@
+# 该文件构建之后会白屏 不可用
+
+
 <template>
-    <iframe src="/map.html" style="width: 100%; height: 600px; border: none;" frameborder="0" title="门店地图"></iframe>
+    <!-- 外层：桌面固定 600，移动端全屏 -->
+    <div class="h-[100vh] md:h-[600px] md:min-h-[600px] bg-[#EEF3FF] relative">
+        <!-- 桌面：左右两栏 -->
+        <div class="hidden md:grid md:grid-cols-[320px_1fr] md:h-full">
+            <!-- 左侧面板（桌面） -->
+            <aside class="bg-white h-full border-r border-gray-200 flex flex-col">
+                <div class="flex items-center gap-2 p-3 border-b border-gray-200">
+                    <input v-model="keyword" @input="load" placeholder="搜索中文店铺"
+                        class="flex-1 w-full px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-400" />
+                    <button class="px-3 py-2 rounded-xl border border-gray-200 bg-white active:scale-[0.98]"
+                        @click="panelOpen = !panelOpen">
+                        {{ panelOpen ? "收起" : "列表" }}
+                    </button>
+                </div>
+
+                <div class="p-2 overflow-auto" :class="panelOpen ? 'block' : 'hidden'">
+                    <div v-for="s in stores" :key="s.id"
+                        class="p-3 rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100" @click="focus(s)">
+                        <div class="font-700 text-[14px] leading-[1.2]">{{ s.nameZh }}</div>
+                        <div class="mt-1 text-[12px] text-gray-500 leading-[1.35]">
+                            {{ s.cityZh }} · {{ s.addressZh }}
+                        </div>
+                    </div>
+
+                    <div v-if="!stores.length" class="p-3 text-[12px] text-gray-400">暂无结果</div>
+                </div>
+            </aside>
+
+            <!-- 地图（桌面） -->
+            <div ref="mapElDesktop" class="h-full" />
+        </div>
+
+        <!-- 移动端：顶部搜索+列表 + 下方地图 -->
+        <div class="md:hidden h-full flex flex-col relative z-1">
+            <!-- 顶部区域 -->
+            <div class="px-3 pt-3">
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+                    <!-- 搜索 + 按钮 -->
+                    <div class="flex items-center gap-2 p-3 border-b border-gray-200">
+                        <input v-model="keyword" @input="load" placeholder="搜索中文店铺"
+                            class="flex-1 w-full px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-400" />
+                        <button class="px-3 py-2 rounded-xl border border-gray-200 bg-white active:scale-[0.98]"
+                            @click="panelOpen = !panelOpen">
+                            {{ panelOpen ? "收起" : "列表" }}
+                        </button>
+                    </div>
+
+                    <!-- 列表（可收起，可滚动） -->
+                    <div class="p-2 overflow-auto" :class="panelOpen ? 'max-h-[42vh]' : 'hidden'">
+                        <div v-for="s in stores" :key="s.id"
+                            class="p-3 rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100" @click="focus(s)">
+                            <div class="font-800 text-[16px] leading-[1.2]">{{ s.nameZh }}</div>
+                            <div class="mt-1 text-[12px] text-gray-500 leading-[1.35]">
+                                {{ s.cityZh }} · {{ s.addressZh }}
+                            </div>
+                        </div>
+
+                        <div v-if="!stores.length" class="p-3 text-[12px] text-gray-400">暂无结果</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 地图：占剩余高度 -->
+            <div class="flex-1 p-3 pt-3">
+                <div ref="mapElMobile" class="h-full rounded-2xl overflow-hidden border border-gray-200" />
+            </div>
+        </div>
+
+        <!-- 右键菜单覆盖层 -->
+        <div v-show="menu.open" class="fixed inset-0 z-[9999]" @mousedown="closeMenu" @touchstart="closeMenu">
+            <div class="context-menu" :style="{ left: menu.x + 'px', top: menu.y + 'px' }" @mousedown.stop
+                @touchstart.stop>
+                <button class="cm-item" @click="menuAction('marker')">
+                    <span class="cm-ico">📍</span>在此添加注记
+                </button>
+                <button class="cm-item" @click="menuAction('address')">
+                    <span class="cm-ico">🧭</span>显示地址
+                </button>
+                <button class="cm-item" @click="menuAction('coord')">
+                    <span class="cm-ico">📌</span>显示坐标
+                </button>
+                <div class="cm-sep"></div>
+                <button class="cm-item" @click="menuAction('center')">
+                    <span class="cm-ico">◎</span>将此处置于地图中间
+                </button>
+            </div>
+        </div>
+        <iframe src="/map.html" style="width: 100%; height: 600px; border: none;" frameborder="0" title="门店地图"></iframe>
+    </div>
 </template>
 
 <script setup lang="ts">

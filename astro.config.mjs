@@ -50,6 +50,9 @@ export default defineConfig({
     }
   },
   vite: {
+    ssr: {
+      noExternal: ['leaflet', 'leaflet.locatecontrol']
+    },
     resolve: {
       alias: {
         '@': SRC,
