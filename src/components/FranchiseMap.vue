@@ -99,27 +99,6 @@ import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 import type { Franchise } from "@/data/franchise";
 
-type CityLevel = "capital" | "province" | "prefecture" | "town";
-
-const LEVEL_PRIORITY: CityLevel[] = [
-    "capital",
-    "province",
-    "prefecture",
-    "town",
-];
-
-function getClusterLevel(cluster: any): CityLevel {
-  const children = cluster.getAllChildMarkers();
-
-  for (const lv of LEVEL_PRIORITY) {
-    if (children.some((m: any) => m.options.__level === lv)) {
-      return lv;
-    }
-  }
-  return "town";
-}
-
-
 type StoreImage = {
     type: string;
     url: string;
@@ -345,44 +324,52 @@ function setMarkerTooltipOpacity(m: L.Marker, opacity: "0" | "1") {
     if (el) el.style.opacity = opacity;
 }
 
-function isValidLatLng(lat: any, lng: any) {
-    const a = Number(lat), b = Number(lng);
-    if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
-    if (Math.abs(a) > 90 || Math.abs(b) > 180) return false;
-    // 顺便防一下 0,0（几内亚湾）
-    if (a === 0 && b === 0) return false;
-    return true;
-}
-
 function renderMarkers() {
+    // 清空门店图层（不要逐个 remove）
     storeLayer?.clearLayers();
     markers.clear();
     if (!map.value || !storeLayer) return;
 
-    // ✅ 先过滤合法坐标
-    const validStores = stores.value.filter(s => isValidLatLng(s.lat, s.lng));
+    const hoverable = isDesktopHover();
+    const mobile = isMobile();
 
-    // 🔥 诊断：看看谁是坏的
-    if (validStores.length !== stores.value.length) {
-        const bad = stores.value.filter(s => !isValidLatLng(s.lat, s.lng));
-        console.warn("[bad coords]", bad.map(x => ({ id: x.id, name: x.nameZh, lat: x.lat, lng: x.lng, url: x.googleUrl })));
-    }
-
-    for (const s of validStores) {
+    for (const s of stores.value) {
         const m = window.L.marker([s.lat, s.lng]).addTo(storeLayer);
-        // ... 你原来的 bindTooltip / bindPopup
+
+        m.bindTooltip(s.nameZh, {
+            permanent: true,
+            direction: "bottom",
+            offset: [0, 10],
+            opacity: 1,
+            interactive: false,
+            className: "poi-label",
+        });
+
+        m.bindPopup(buildPopupHtml(s), {
+            maxWidth: mobile ? 320 : 420,
+            minWidth: mobile ? 220 : 260,
+            closeButton: true,
+            autoPan: true,
+            autoPanPaddingTopLeft: mobile ? [12, 170] : [12, 12],
+            autoPanPaddingBottomRight: mobile ? [12, 180] : [12, 160],
+            className: "poi-popup",
+            offset: mobile ? [0, 18] : [0, 10],
+        });
+
+        m.on("popupopen", () => setMarkerTooltipOpacity(m, "0"));
+        m.on("popupclose", () => setMarkerTooltipOpacity(m, "1"));
+
+        if (hoverable) {
+            m.on("mouseover", () => m.openPopup());
+            m.on("mouseout", () => m.closePopup());
+        }
+
         markers.set(s.id, m);
     }
 
-    if (validStores.length > 0) {
-        const first = validStores[0];
-
-        // 先把地图定位到第一个门店
-        map.value.setView([first.lat, first.lng], 13, { animate: false });
-
-        // 可选：打开第一个门店的 popup
-        const mk = markers.get(first.id);
-        if (mk) mk.openPopup();
+    if (stores.value.length > 0) {
+        const latlngs = stores.value.map((s) => [s.lat, s.lng] as [number, number]);
+        map.value.fitBounds(latlngs, { padding: [30, 30] });
     }
 }
 
@@ -616,9 +603,10 @@ async function initial() {
     if (!container) return;
 
     initMap(container);
+    await load();
+
     await nextTick();
     map.value?.invalidateSize();
-    await load();
 }
 
 /** 生命周期 / 监听 */
