@@ -9,10 +9,6 @@ import { useSafeEffect } from '@/composables/useSafeEffect';
 
 const props = defineProps(['class'])
 
-const data = null;
-
-useSafeEffect(() => {
-    (data as any).username = 1
-})
+useSafeEffect(() => {})
 
 </script>
