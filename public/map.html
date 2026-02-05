@@ -480,6 +480,7 @@
         <div class="desktop">
             <aside class="aside">
                 <div class="row">
+                    <select id="countryDesk" class="input" style="max-width: 90px; flex: 0 0 90px;"></select>
                     <input id="kwDesk" class="input" placeholder="搜索中文店铺" />
                     <button id="toggleDesk" class="btn">收起</button>
                 </div>
@@ -493,6 +494,7 @@
             <div class="m-top">
                 <div class="m-card">
                     <div class="row">
+                        <select id="countryMob" class="input" style="max-width: 90px; flex: 0 0 90px;"></select>
                         <input id="kwMob" class="input" placeholder="搜索中文店铺" />
                         <button id="toggleMob" class="btn">收起</button>
                     </div>
@@ -544,6 +546,9 @@
             geoHighAccuracy: true,      // 尽量高精度
             geoCenterFallback: { lat: 13.736, lng: 100.523 }, // 无定位/失败时 fallback
             geoUseFallbackWhenGeoFail: false, // 定位失败是否允许用 geoCenterFallback（默认 false：失败就第一条）
+            // 国家
+            countries: [],          // [{id,name,sort,franchises:[...]}]
+            countryId: "",          // 当前选中的国家 id
         };
 
         /** ========= utils ========= */
@@ -700,6 +705,8 @@
             toggleMob: document.getElementById("toggleMob"),
             overlay: document.getElementById("overlay"),
             cm: document.getElementById("cm"),
+            countryDesk: document.getElementById("countryDesk"),
+            countryMob: document.getElementById("countryMob"),
         };
 
         /** ========= menu ========= */
@@ -988,6 +995,33 @@
         }
 
         /** ========= list rendering ========= */
+        function renderCountrySelect() {
+            const list = Array.isArray(state.countries) ? state.countries.slice() : [];
+            list.sort((a, b) => Number(a.sort ?? 0) - Number(b.sort ?? 0));
+
+            // 没有 countryId：默认第一个国家
+            if (!state.countryId && list.length) state.countryId = list[0].id;
+
+            const options = list.map(c => {
+                const selected = c.id === state.countryId ? ' selected' : '';
+                return `<option value="${esc(c.id)}"${selected}>${esc(c.name)}</option>`;
+            }).join("");
+
+            if (el.countryDesk) el.countryDesk.innerHTML = options || `<option value="">暂无国家</option>`;
+            if (el.countryMob) el.countryMob.innerHTML = options || `<option value="">暂无国家</option>`;
+
+            // 保证两个 select 值一致
+            if (el.countryDesk && el.countryDesk.value !== state.countryId) el.countryDesk.value = state.countryId;
+            if (el.countryMob && el.countryMob.value !== state.countryId) el.countryMob.value = state.countryId;
+        }
+
+        function getCurrentCountry() {
+            const list = Array.isArray(state.countries) ? state.countries.slice() : [];
+            list.sort((a, b) => Number(a.sort ?? 0) - Number(b.sort ?? 0));
+            if (!state.countryId && list.length) state.countryId = list[0].id;
+            return list.find(c => c.id === state.countryId) || list[0] || null;
+        }
+
         function renderList() {
             const desk = [];
             const mob = [];
@@ -1042,9 +1076,12 @@
         }
 
         /** ========= data load ========= */
-        async function load() {
+        async function load(opt = {}) {
+            const { forceFocusFirst = false } = opt;
+
             const u = new URL("/api/franchise.json", window.location.origin);
             u.searchParams.set("q", state.keyword || "");
+            if (state.countryId) u.searchParams.set("countryId", state.countryId);
 
             const r = await fetch(u.toString());
             if (!r.ok) {
@@ -1057,20 +1094,30 @@
             }
 
             const j = await r.json();
-            const rawList = (j.list ?? []);
 
+            // ✅ 你的新数据结构：countries: [{id,name,sort,franchises:[]}]
+            // 兼容旧返回：list:[]
+            if (Array.isArray(j.countries)) {
+                state.countries = j.countries;
+                renderCountrySelect();
+            } else {
+                state.countries = [];
+            }
+
+            // ✅ 当前国家门店列表
+            let rawList = [];
+            const cur = getCurrentCountry();
+            if (cur && Array.isArray(cur.franchises)) rawList = cur.franchises;
+            else rawList = (j.list ?? []);
+
+            // parse
             const parsed = [];
             for (const item of rawList) {
                 const googleUrl = item.googleUrl || "";
                 const p = parseGoogleMapsLatLng(googleUrl);
-                if (!p) {
-                    console.warn("[skip] googleUrl missing/invalid:", item.id, googleUrl);
-                    continue;
-                }
-                if (p.confidence === "low") {
-                    console.warn("[skip] low confidence coord (@ center):", item.id, googleUrl);
-                    continue;
-                }
+                if (!p) continue;
+                if (p.confidence === "low") continue;
+
                 parsed.push({
                     ...item,
                     lat: p.lat,
@@ -1083,15 +1130,17 @@
 
             state.stores = parsed;
 
-            // 首次加载：根据开关决定聚焦策略
-            if (!state.initialFocused && state.stores.length > 0) {
-                // 默认：第一条
-                let targetId = state.stores[0].id;
+            // ✅ 默认聚焦规则：
+            // - 首次进入：第一国第一店
+            // - 切换国家：强制第一店
+            // - 搜索：不强制（避免打断用户正在看的门店），除非你想也强制
+            const shouldAutoFocus = forceFocusFirst || (!state.initialFocused);
 
-                // 只有“开关=true 且 已授权(granted)”才会真的用定位
-                // 这样：你没开定位/没授权，就绝不会跑到别的店，也不会弹窗
+            if (shouldAutoFocus && state.stores.length > 0) {
+                let targetId = state.stores[0].id; // ✅ 永远先第一条
+
+                // ✅ 只有“开关=true 且 已授权(granted)”才允许最近门店
                 const granted = await canUseGeolocationSilently();
-
                 if (state.enableNearestByGeo && granted) {
                     try {
                         const pos = await getCurrentPositionSafe({
@@ -1099,14 +1148,11 @@
                             maximumAge: state.geoMaxAgeMs,
                             enableHighAccuracy: state.geoHighAccuracy,
                         });
-
                         const me = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                         const nearest = findNearestStore(me, state.stores);
                         if (nearest?.store?.id) targetId = nearest.store.id;
                     } catch (e) {
-                        console.warn("[geo] failed, fallback to first store:", e?.message || e);
-
-                        // 只有你明确允许，才使用 geoCenterFallback
+                        // ✅ 定位失败：默认第一条（可选允许 fallback）
                         if (state.geoUseFallbackWhenGeoFail) {
                             const nearest = findNearestStore(state.geoCenterFallback, state.stores);
                             if (nearest?.store?.id) targetId = nearest.store.id;
@@ -1118,7 +1164,7 @@
             }
 
             renderList();
-            renderMarkers(); // renderMarkers 里会处理 pendingFocusId
+            renderMarkers();
         }
 
         /** ========= debounce input ========= */
@@ -1129,6 +1175,21 @@
                 t = setTimeout(() => fn(...args), ms);
             };
         }
+
+        function setCountry(id) {
+            state.countryId = String(id || "");
+            // 切换国家：不需要定位，也不考虑最近，直接第一家
+            state.initialFocused = false; // 允许本次自动聚焦
+            load({ forceFocusFirst: true });
+        }
+
+        // country select change
+        el.countryDesk?.addEventListener("change", (e) => {
+            setCountry(e.target.value);
+        });
+        el.countryMob?.addEventListener("change", (e) => {
+            setCountry(e.target.value);
+        });
 
         const onKeywordInput = debounce(() => {
             load();
