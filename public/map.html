@@ -534,6 +534,16 @@
             menu: { open: false, x: 0, y: 0, latlng: null },
             resizeTimer: null,
             hoverable: false,
+            initialFocused: false,     // 是否已经做过“首次自动聚焦”
+            pendingFocusId: null,      // 首次聚焦目标（门店 id）
+            initialZoom: 20, // 初始化 地图缩放比例
+            // 定位配置
+            enableNearestByGeo: false,   // 开关：true=定位最近门店；false=第一条 看产品怎么定
+            geoTimeoutMs: 6000,         // 定位超时
+            geoMaxAgeMs: 60 * 1000,     // 允许使用缓存定位
+            geoHighAccuracy: true,      // 尽量高精度
+            geoCenterFallback: { lat: 13.736, lng: 100.523 }, // 无定位/失败时 fallback
+            geoUseFallbackWhenGeoFail: false, // 定位失败是否允许用 geoCenterFallback（默认 false：失败就第一条）
         };
 
         /** ========= utils ========= */
@@ -608,6 +618,74 @@
             const tip = m.getTooltip();
             const el = tip?.getElement?.();
             if (el) el.style.opacity = opacity;
+        }
+
+        function toRad(d) { return (d * Math.PI) / 180; }
+        function haversineMeters(a, b) {
+            const R = 6371000;
+            const dLat = toRad(b.lat - a.lat);
+            const dLng = toRad(b.lng - a.lng);
+            const s1 = Math.sin(dLat / 2);
+            const s2 = Math.sin(dLng / 2);
+            const aa =
+                s1 * s1 +
+                Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * s2 * s2;
+            return 2 * R * Math.asin(Math.min(1, Math.sqrt(aa)));
+        }
+
+        function findNearestStore(latlng, list) {
+            if (!latlng || !Array.isArray(list) || list.length === 0) return null;
+            let best = null;
+            let bestDist = Infinity;
+            for (const s of list) {
+                if (typeof s.lat !== "number" || typeof s.lng !== "number") continue;
+                const d = haversineMeters(latlng, { lat: s.lat, lng: s.lng });
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = s;
+                }
+            }
+            return best ? { store: best, dist: bestDist } : null;
+        }
+
+        function getCurrentPositionSafe(opt) {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
+
+                const timer = setTimeout(() => {
+                    reject(new Error("Geolocation timeout"));
+                }, opt.timeout ?? 6000);
+
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        clearTimeout(timer);
+                        resolve(pos);
+                    },
+                    (err) => {
+                        clearTimeout(timer);
+                        reject(err);
+                    },
+                    {
+                        enableHighAccuracy: !!opt.enableHighAccuracy,
+                        timeout: opt.timeout ?? 6000,
+                        maximumAge: opt.maximumAge ?? 0,
+                    }
+                );
+            });
+        }
+
+        async function canUseGeolocationSilently() {
+            if (!state.enableNearestByGeo) return false;
+
+            // 没有 Permissions API：为了“不会弹窗”，直接当做不可用
+            if (!navigator.permissions?.query) return false;
+
+            try {
+                const p = await navigator.permissions.query({ name: "geolocation" });
+                return p.state === "granted"; // 只有已授权才用定位
+            } catch {
+                return false;
+            }
         }
 
         /** ========= UI refs ========= */
@@ -872,20 +950,39 @@
                 state.markers.set(s.id, m);
             }
 
-            if (state.stores.length > 0) {
-                const latlngs = state.stores.map(s => [s.lat, s.lng]);
-                state.map.fitBounds(latlngs, { padding: [30, 30] });
+            // 首次：优先聚焦 pendingFocusId（默认第一条）
+            // 注意：必须等 marker 都创建完再 focus，否则找不到 marker
+            if (state.pendingFocusId) {
+                const s = state.stores.find(x => x.id === state.pendingFocusId);
+                state.pendingFocusId = null;
+                if (s) {
+                    // 用 requestAnimationFrame 确保地图已经 ready
+                    requestAnimationFrame(() => {
+                        focusStore(s, { openPopup: true, zoom: state.initialZoom, markInitial: true });
+                    });
+                    return;
+                }
             }
         }
 
-        function focusStore(s) {
+        function focusStore(s, opt = {}) {
+            const {
+                openPopup = true,
+                zoom = 16,
+                markInitial = false,
+                animate = true,
+            } = opt;
+
             if (!state.mapReady || !state.map) return;
             if (!state.map._loaded) return;
 
-            state.map.setView([s.lat, s.lng], 16, { animate: true });
+            state.map.setView([s.lat, s.lng], zoom, { animate });
 
             const mk = state.markers.get(s.id);
-            if (mk) mk.openPopup();
+            if (openPopup && mk) mk.openPopup();
+
+            // 首次聚焦完成，后续不要重复抢焦点
+            if (markInitial) state.initialFocused = true;
 
             if (isMobile()) setPanelOpen(false);
         }
@@ -985,8 +1082,43 @@
             }
 
             state.stores = parsed;
+
+            // 首次加载：根据开关决定聚焦策略
+            if (!state.initialFocused && state.stores.length > 0) {
+                // 默认：第一条
+                let targetId = state.stores[0].id;
+
+                // 只有“开关=true 且 已授权(granted)”才会真的用定位
+                // 这样：你没开定位/没授权，就绝不会跑到别的店，也不会弹窗
+                const granted = await canUseGeolocationSilently();
+
+                if (state.enableNearestByGeo && granted) {
+                    try {
+                        const pos = await getCurrentPositionSafe({
+                            timeout: state.geoTimeoutMs,
+                            maximumAge: state.geoMaxAgeMs,
+                            enableHighAccuracy: state.geoHighAccuracy,
+                        });
+
+                        const me = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        const nearest = findNearestStore(me, state.stores);
+                        if (nearest?.store?.id) targetId = nearest.store.id;
+                    } catch (e) {
+                        console.warn("[geo] failed, fallback to first store:", e?.message || e);
+
+                        // 只有你明确允许，才使用 geoCenterFallback
+                        if (state.geoUseFallbackWhenGeoFail) {
+                            const nearest = findNearestStore(state.geoCenterFallback, state.stores);
+                            if (nearest?.store?.id) targetId = nearest.store.id;
+                        }
+                    }
+                }
+
+                state.pendingFocusId = targetId;
+            }
+
             renderList();
-            renderMarkers();
+            renderMarkers(); // renderMarkers 里会处理 pendingFocusId
         }
 
         /** ========= debounce input ========= */
