@@ -70,6 +70,7 @@ async function buildConfig(input: any) {
         userId: getUserId(),
         appType: 1,
         token,
+        ...rawParam,
     };
 
     let finalBody: string | Uint8Array;

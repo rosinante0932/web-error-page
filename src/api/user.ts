@@ -25,7 +25,12 @@ export function getKvConfig(params: any, opt: any) {
   return nodeFetch.post("/common/kv/config", params, opt);
 }
 
+export function appUpdate(params: any, opt: any) {
+  return nodeFetch.post("/common/appUpdate", params, opt);
+}
+
 export default {
   getKvConfig,
-  serverTime
+  serverTime,
+  appUpdate
 };

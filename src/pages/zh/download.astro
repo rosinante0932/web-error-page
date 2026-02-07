@@ -9,7 +9,6 @@ const title = "易换官网 - 应用下载";
 const referer = Astro.locals.referer ?? "";
 const url = new URL(Astro.url);
 const siteParam = url.searchParams.get("site") || "";
-
 const keptQuery = siteParam ? `?site=${encodeURIComponent(siteParam)}` : "";
 
 // 站内链接：带 locale，避免中间件 302
@@ -20,18 +19,22 @@ const href = (p: string) => {
 };
 
 const downloadLink = href("/download");
-
-// 二维码内容
 const qrcodeUrl = downloadLink;
 
 const qrcodeBox =
   "w-[160px] h-[160px] bg-[#fff] flex items-center justify-center mt-[20px]";
-const h5Btn =
-  "bg-[#4583fe] w-100% py-3 rounded text-[#fff] text-sm";
+const h5Btn = "bg-[#4583fe] w-100% py-3 rounded text-[#fff] text-sm";
 ---
 
 <BaseLayout {title}>
-  <div data-referer={referer} style="display:none"></div>
+  {/*  只保留一个 meta */}
+  <div
+    id="app-meta"
+    data-base={base}
+    data-referer={referer}
+    style="display:none"
+  >
+  </div>
 
   <!-- pc -->
   <section
@@ -41,26 +44,26 @@ const h5Btn =
       class="grid grid-cols-2 gap-20 bg-[length:710px_710px] bg-right bg-no-repeat bg-[url(/assets/download/02.png)]"
     >
       <ul class="flex items-center justify-center flex-col">
-        <img src="/assets/yhicon.png" alt="易换" class="w-[124px] h-[124px] mb-[40px]" />
+        <img
+          src="/assets/yhicon.png"
+          alt="易换"
+          class="w-[124px] h-[124px] mb-[40px]"
+        />
 
         <h2 class="text-[#147ff2]">
-          <span class="text-[#147ff2] text-[36px] font-600">
-            全球通兑的货币极速换汇平台
-          </span>
+          <span class="text-[#147ff2] text-[36px] font-600"
+            >全球通兑的货币极速换汇平台</span
+          >
         </h2>
 
         <h3 class="text-[#969696] text-[20px] py-[25px]">
           上百种货币通兑·特有黄金交付·极速到账
         </h3>
+        <h4 class="text-[#141414] text-[16px]">
+          请用手机扫描下方二维码下载APP
+        </h4>
 
-        <h4 class="text-[#141414] text-[16px]">请用手机扫描下方二维码下载APP</h4>
-
-        <Qrcode
-          client:only
-          url={qrcodeUrl}
-          size={140}
-          className={qrcodeBox}
-        />
+        <Qrcode client:only url={qrcodeUrl} size={140} className={qrcodeBox} />
       </ul>
 
       <ul class="relative h-[750px] left-[-50px]">
@@ -69,12 +72,36 @@ const h5Btn =
           alt=""
           class="h-[788px] absolute top-0 left-[50%] translate-x-[-50%]"
         />
-        <img src="/assets/download/03.png" alt="" class="absolute top-[85px] left-[25px] h-[70px]" />
-        <img src="/assets/download/04.png" alt="" class="absolute bottom-[65px] right-[40px] h-[80px]" />
-        <img src="/assets/download/05.png" alt="" class="absolute bottom-[380px] right-[-110px] h-[130px]" />
-        <img src="/assets/download/06.png" alt="" class="absolute bottom-[150px] right-[-80px] h-[130px]" />
-        <img src="/assets/download/07.png" alt="" class="absolute bottom-[280px] left-[-80px] h-[130px]" />
-        <img src="/assets/download/08.png" alt="" class="absolute bottom-[50px] left-[-120px] h-[130px]" />
+        <img
+          src="/assets/download/03.png"
+          alt=""
+          class="absolute top-[85px] left-[25px] h-[70px]"
+        />
+        <img
+          src="/assets/download/04.png"
+          alt=""
+          class="absolute bottom-[65px] right-[40px] h-[80px]"
+        />
+        <img
+          src="/assets/download/05.png"
+          alt=""
+          class="absolute bottom-[380px] right-[-110px] h-[130px]"
+        />
+        <img
+          src="/assets/download/06.png"
+          alt=""
+          class="absolute bottom-[150px] right-[-80px] h-[130px]"
+        />
+        <img
+          src="/assets/download/07.png"
+          alt=""
+          class="absolute bottom-[280px] left-[-80px] h-[130px]"
+        />
+        <img
+          src="/assets/download/08.png"
+          alt=""
+          class="absolute bottom-[50px] left-[-120px] h-[130px]"
+        />
       </ul>
     </div>
   </section>
@@ -100,21 +127,205 @@ const h5Btn =
             loading="lazy"
             class="w-[70%] mx-auto relative z-1"
           />
-          <img src="/assets/download/02.png" alt="" class="absolute top-50% translate-y-[-50%]" />
-          <img src="/assets/download/03.png" alt="" class="absolute top-32 left-0 w-20" />
-          <img src="/assets/download/04.png" alt="" class="absolute bottom-32 right-0 w-16" />
-          <img src="/assets/download/05.png" alt="" class="absolute top-34 right-10 z-2 h-20" />
-          <img src="/assets/download/06.png" alt="" class="absolute top-54 right-0 z-2 h-20" />
-          <img src="/assets/download/07.png" alt="" class="absolute bottom-32 left-0 z-2 h-20" />
-          <img src="/assets/download/08.png" alt="" class="absolute bottom-10 left-6 z-2 h-20" />
+          <img
+            src="/assets/download/02.png"
+            alt=""
+            class="absolute top-50% translate-y-[-50%]"
+          />
+          <img
+            src="/assets/download/03.png"
+            alt=""
+            class="absolute top-32 left-0 w-20"
+          />
+          <img
+            src="/assets/download/04.png"
+            alt=""
+            class="absolute bottom-32 right-0 w-16"
+          />
+          <img
+            src="/assets/download/05.png"
+            alt=""
+            class="absolute top-34 right-10 z-2 h-20"
+          />
+          <img
+            src="/assets/download/06.png"
+            alt=""
+            class="absolute top-54 right-0 z-2 h-20"
+          />
+          <img
+            src="/assets/download/07.png"
+            alt=""
+            class="absolute bottom-32 left-0 z-2 h-20"
+          />
+          <img
+            src="/assets/download/08.png"
+            alt=""
+            class="absolute bottom-10 left-6 z-2 h-20"
+          />
         </picture>
 
-        <a href={downloadLink} class="w-100% px-4">
-          <button class={h5Btn}>立即下载</button>
-        </a>
+        {/*  不要 a，不跳转页面，完全用接口返回的 downloadUrl */}
+        <button class={h5Btn} type="button" data-appupdate-btn="1">
+          立即下载
+        </button>
+
+        {/*  只做状态提示，不做假进度 */}
+        <div id="dlProgress" class="px-4 mt-2 text-sm text-gray-600 hidden">
+          <span id="dlText">准备下载...</span>
+        </div>
       </ul>
 
       <DeviceDownload client:only="vue" />
     </div>
   </div>
+
+  <script is:inline>
+    function detectPlatform() {
+      const ua = navigator.userAgent || "";
+
+      // iOS（iPhone / iPad / iPod）
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        return 1; // iOS
+      }
+
+      // Android
+      if (/Android/i.test(ua)) {
+        return 2; // Android
+      }
+
+      // 其他（PC / unknown）
+      return 2;
+    }
+  </script>
+
+  <script is:inline>
+    (() => {
+      if (window.__appUpdateBound) return;
+      window.__appUpdateBound = true;
+
+      const meta = document.getElementById("app-meta");
+      const base = meta?.dataset?.base || ""; // "/zh" "/en" ...
+      const referer = meta?.dataset?.referer || "";
+
+      const elBox = document.getElementById("dlProgress");
+      const elText = document.getElementById("dlText");
+
+      function setStatus(text) {
+        try {
+          if (elBox) elBox.classList.remove("hidden");
+          if (elText) elText.textContent = text;
+        } catch {}
+      }
+
+      function hideStatus() {
+        try {
+          if (elBox) elBox.classList.add("hidden");
+        } catch {}
+      }
+
+      function screenSizeText() {
+        const w = window.screen?.width || window.innerWidth || 0;
+        const h = window.screen?.height || window.innerHeight || 0;
+        return `{${w}, ${h}}`;
+      }
+
+      const platform = detectPlatform(); // 1 ios / 2 android
+
+      function buildPayload() {
+        return {
+          deviceId: "8639f6b8d20a87795247f019999ead6a",
+          param: {
+            publishType: 3,
+            platform,
+          },
+          notificationStatus: 0,
+          timestamp: Date.now(),
+          osVersion: navigator.userAgent || "",
+          deviceName: "mobile",
+          platform: 4,
+          lbs: "",
+          network: -1,
+          screenSize: screenSizeText(),
+          userId: -Date.now(),
+          appType: 1,
+          token: "",
+          referer, // 你要就带上，不影响后端
+        };
+      }
+
+      function pickDownloadUrl(json) {
+        // 兼容多层结构
+        return (
+          json?.downloadUrl ||
+          json?.data?.downloadUrl ||
+          json?.data?.data?.downloadUrl ||
+          json?.result?.downloadUrl ||
+          ""
+        );
+      }
+
+      async function callAppUpdateAndGetUrl() {
+        const r = await fetch(`${base}/api/appUpdate`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify(buildPayload()),
+          credentials: "same-origin",
+        });
+
+        const json = await r.json().catch(() => ({}));
+
+        if (!r.ok) {
+          console.warn("[appUpdate] http fail:", r.status, json);
+          throw new Error("appUpdate_http_" + r.status);
+        }
+
+        //  你调试时打开这个
+        console.log("[appUpdate] resp =", json);
+
+        const downloadUrl = pickDownloadUrl(json);
+        if (!downloadUrl) throw new Error("empty_downloadUrl");
+        return downloadUrl;
+      }
+
+      async function startDownload(btn) {
+        setStatus("请求下载链接中...");
+
+        const url = await callAppUpdateAndGetUrl();
+
+        // ⚠️ 网页拿不到系统下载进度，只能提示“已跳转到安装/下载”
+        setStatus("已获取下载链接，正在打开...");
+
+        // itms-services / apk 直链都走这里
+        window.location.href = url;
+
+        // 2秒后隐藏提示（页面可能不会跳走）
+        setTimeout(hideStatus, 2000);
+      }
+
+      document.addEventListener(
+        "click",
+        async (e) => {
+          const btn = e.target?.closest?.('[data-appupdate-btn="1"]');
+          if (!btn) return;
+
+          if (btn.__loading) return;
+          btn.__loading = true;
+
+          try {
+            await startDownload(btn);
+          } catch (err) {
+            console.warn("[download] failed:", err?.message || String(err));
+            setStatus("下载失败，请稍后重试");
+            setTimeout(hideStatus, 2500);
+          } finally {
+            setTimeout(() => (btn.__loading = false), 800);
+          }
+        },
+        true,
+      );
+    })();
+  </script>
 </BaseLayout>
