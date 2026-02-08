@@ -1,0 +1,61 @@
+/* =========================
+   Leaflet 控件 · 统一美化
+   ========================= */
+
+/* 控件整体不要自带边框 */
+.leaflet-control {
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* 所有按钮统一为“白色胶囊卡片” */
+.leaflet-control a,
+.leaflet-control-layers-toggle {
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  border: none !important;
+  border-radius: 12px !important;
+
+  /* 关键：干净的轻阴影 */
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* hover 更“高级”的反馈 */
+.leaflet-control a:hover,
+.leaflet-control-layers-toggle:hover {
+  background: #f8fafc !important;
+}
+
+/* active 轻微按压感 */
+.leaflet-control a:active,
+.leaflet-control-layers-toggle:active {
+  transform: scale(0.96);
+}
+
+/* 去掉 zoom + / - 中间那条难看的分割线 */
+.leaflet-control-zoom a:first-child {
+  border-bottom: none !important;
+}
+
+/* layers 图标居中 & 尺寸统一 */
+.leaflet-control-layers-toggle {
+  background-position: center !important;
+  background-size: 20px 20px !important;
+}
+
+/* locate 插件里的箭头图标 */
+.leaflet-control-locate a {
+  font-size: 18px;
+}
+
+/* 控件之间留点呼吸感 */
+.leaflet-control>a+a {
+  margin-top: 8px;
+}

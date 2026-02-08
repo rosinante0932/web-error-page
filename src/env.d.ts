@@ -1,5 +1,9 @@
 /// <reference types="astro/client" />
 
+declare module "astro:i18n" {
+  export function getAbsoluteLocaleUrlList(): string[];
+}
+
 declare namespace App {
     interface Locals {
         local_ip: string;

@@ -2,10 +2,10 @@
 import { TABS } from "@/data/teach-yh-tabs";
 import BaseLayout from "@/layouts/BaseLayout.astro";
 
-// ✅ 固定当前页面语言（因为你文件路径就是 /zh/teach-yh/[tab].astro）
+// 固定当前页面语言（因为你文件路径就是 /zh/teach-yh/[tab].astro）
 const LOCALE = "zh" as const;
 
-// ✅ 所有支持的语言（用于 hreflang）
+// 所有支持的语言（用于 hreflang）
 const LOCALES = ["zh", "en", "th", "vi", "ko", "km"] as const;
 
 function stripUrl(u: URL) {
@@ -16,7 +16,7 @@ function stripUrl(u: URL) {
 }
 
 /**
- * ✅ 根据当前 URL 生成不同语言的同路径 URL
+ * 根据当前 URL 生成不同语言的同路径 URL
  * 假设路径结构：/{locale}/teach-yh/{tab}
  */
 function withLocale(u: URL, locale: string) {
@@ -29,23 +29,23 @@ function withLocale(u: URL, locale: string) {
 
 const { tab } = Astro.params;
 
-// ✅ SSR：根据 tab 找当前页
+// SSR：根据 tab 找当前页
 const current = TABS.find((t) => t.key === tab);
 
-// ✅ SSR：非法 tab 直接 302 到默认 tab（你原来就想这么干）
+// SSR：非法 tab 直接 302 到默认 tab（你原来就想这么干）
 if (!current) {
   return Astro.redirect(`/${LOCALE}/teach-yh/${TABS[0].key}`, 302);
 }
 
 const canonicalUrl = stripUrl(Astro.url);
 
-// ✅ 生成图片路径
+// 生成图片路径
 const images = Array.from(
   { length: current.count },
   (_, i) => `/assets/teach-yh/${current.dir}/${i + 1}.png`,
 );
 
-// ✅ 常用链接（统一带 /zh）
+// 常用链接（统一带 /zh）
 const basePath = `/${LOCALE}/teach-yh`;
 const firstTabHref = `${basePath}/${TABS[0].key}`;
 ---

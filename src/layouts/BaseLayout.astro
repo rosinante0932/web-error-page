@@ -1,4 +1,6 @@
 ---
+import "@/assets/css/initial.css";
+import "@/assets/css/map.css";
 import { resolveLocale, type Locale } from "@/configs/i18n.config";
 import BaseHead from "../components/BaseHead.astro";
 import Qrcode from "@/components/Qrcode.vue";
@@ -218,6 +220,11 @@ const hoverArrow = "group-hover:opacity-100 opacity-0";
 
         <div class={navGroup}>
           <a href={href("/qa")} data-nav="/qa" class={navLink}>常见问题</a>
+          <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
+        </div>
+
+        <div class={navGroup}>
+          <a href={href("/map")} data-nav="/map" class={navLink}>地图</a>
           <img src="/assets/header/hover.svg" alt="" class={hoverArrow} />
         </div>
       </div>

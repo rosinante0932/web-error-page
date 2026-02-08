@@ -1,0 +1,23 @@
+---
+import ErrorBoundary from "@/components/ErrorBoundary.vue";
+import FranchiseMap from "@/components/FranchiseMap.vue";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+
+const title = "易换官网-地图";
+---
+
+<BaseLayout {title}>
+    <link rel="stylesheet" href="/css/leaflet.css" />
+    <link rel="stylesheet" href="/css/L.Control.Locate.min.css" />
+    <link rel="stylesheet" href="/css/MarkerCluster.css" />
+    <link rel="stylesheet" href="/css/MarkerCluster.Default.css" />
+    <section class="mt-10">
+        <ErrorBoundary>
+            <FranchiseMap client:only="vue" />
+        </ErrorBoundary>
+    </section>
+    <script is:inline src="/js/leaflet.js" defer></script>
+    <script is:inline src="/js/L.Control.Locate.min.js" defer></script>
+    <script is:inline src="/js/leaflet.markercluster.js" defer></script>
+   
+</BaseLayout>

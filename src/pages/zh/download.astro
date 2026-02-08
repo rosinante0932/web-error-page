@@ -1,8 +1,9 @@
 ---
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import "@/assets/css/initial.css";
+
 import Qrcode from "@/components/Qrcode.vue";
 import DeviceDownload from "@/components/DeviceDownload.vue";
+import ErrorBoundary from "@/components/ErrorBoundary.vue";
 
 const title = "易换官网 - 应用下载";
 
@@ -63,7 +64,18 @@ const h5Btn = "bg-[#4583fe] w-100% py-3 rounded text-[#fff] text-sm";
           请用手机扫描下方二维码下载APP
         </h4>
 
-        <Qrcode client:only url={qrcodeUrl} size={140} className={qrcodeBox} />
+        <h4 class="text-[#141414] text-[16px]">
+          请用手机扫描下方二维码下载APP
+        </h4>
+
+        <ErrorBoundary>
+          <Qrcode
+            client:only
+            url={qrcodeUrl}
+            size={140}
+            className={qrcodeBox}
+          />
+        </ErrorBoundary>
       </ul>
 
       <ul class="relative h-[750px] left-[-50px]">
@@ -175,7 +187,9 @@ const h5Btn = "bg-[#4583fe] w-100% py-3 rounded text-[#fff] text-sm";
         </div>
       </ul>
 
-      <DeviceDownload client:only="vue" />
+      <ErrorBoundary>
+        <DeviceDownload client:only="vue" />
+      </ErrorBoundary>
     </div>
   </div>
 

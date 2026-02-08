@@ -1,0 +1,868 @@
+# 该文件构建之后会白屏 不可用
+
+
+<template>
+    <!-- 外层：桌面固定 600，移动端全屏 -->
+    <div class="h-[100vh] md:h-[600px] md:min-h-[600px] bg-[#EEF3FF] relative">
+        <!-- 桌面：左右两栏 -->
+        <div class="hidden md:grid md:grid-cols-[320px_1fr] md:h-full">
+            <!-- 左侧面板（桌面） -->
+            <aside class="bg-white h-full border-r border-gray-200 flex flex-col">
+                <div class="flex items-center gap-2 p-3 border-b border-gray-200">
+                    <input v-model="keyword" @input="load" placeholder="搜索中文店铺"
+                        class="flex-1 w-full px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-400" />
+                    <button class="px-3 py-2 rounded-xl border border-gray-200 bg-white active:scale-[0.98]"
+                        @click="panelOpen = !panelOpen">
+                        {{ panelOpen ? "收起" : "列表" }}
+                    </button>
+                </div>
+
+                <div class="p-2 overflow-auto" :class="panelOpen ? 'block' : 'hidden'">
+                    <div v-for="s in stores" :key="s.id"
+                        class="p-3 rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100" @click="focus(s)">
+                        <div class="font-700 text-[14px] leading-[1.2]">{{ s.nameZh }}</div>
+                        <div class="mt-1 text-[12px] text-gray-500 leading-[1.35]">
+                            {{ s.cityZh }} · {{ s.addressZh }}
+                        </div>
+                    </div>
+
+                    <div v-if="!stores.length" class="p-3 text-[12px] text-gray-400">暂无结果</div>
+                </div>
+            </aside>
+
+            <!-- 地图（桌面） -->
+            <div ref="mapElDesktop" class="h-full" />
+        </div>
+
+        <!-- 移动端：顶部搜索+列表 + 下方地图 -->
+        <div class="md:hidden h-full flex flex-col relative z-1">
+            <!-- 顶部区域 -->
+            <div class="px-3 pt-3">
+                <div class="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+                    <!-- 搜索 + 按钮 -->
+                    <div class="flex items-center gap-2 p-3 border-b border-gray-200">
+                        <input v-model="keyword" @input="load" placeholder="搜索中文店铺"
+                            class="flex-1 w-full px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-gray-400" />
+                        <button class="px-3 py-2 rounded-xl border border-gray-200 bg-white active:scale-[0.98]"
+                            @click="panelOpen = !panelOpen">
+                            {{ panelOpen ? "收起" : "列表" }}
+                        </button>
+                    </div>
+
+                    <!-- 列表（可收起，可滚动） -->
+                    <div class="p-2 overflow-auto" :class="panelOpen ? 'max-h-[42vh]' : 'hidden'">
+                        <div v-for="s in stores" :key="s.id"
+                            class="p-3 rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100" @click="focus(s)">
+                            <div class="font-800 text-[16px] leading-[1.2]">{{ s.nameZh }}</div>
+                            <div class="mt-1 text-[12px] text-gray-500 leading-[1.35]">
+                                {{ s.cityZh }} · {{ s.addressZh }}
+                            </div>
+                        </div>
+
+                        <div v-if="!stores.length" class="p-3 text-[12px] text-gray-400">暂无结果</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 地图：占剩余高度 -->
+            <div class="flex-1 p-3 pt-3">
+                <div ref="mapElMobile" class="h-full rounded-2xl overflow-hidden border border-gray-200" />
+            </div>
+        </div>
+
+        <!-- 右键菜单覆盖层 -->
+        <div v-show="menu.open" class="fixed inset-0 z-[9999]" @mousedown="closeMenu" @touchstart="closeMenu">
+            <div class="context-menu" :style="{ left: menu.x + 'px', top: menu.y + 'px' }" @mousedown.stop
+                @touchstart.stop>
+                <button class="cm-item" @click="menuAction('marker')">
+                    <span class="cm-ico">📍</span>在此添加注记
+                </button>
+                <button class="cm-item" @click="menuAction('address')">
+                    <span class="cm-ico">🧭</span>显示地址
+                </button>
+                <button class="cm-item" @click="menuAction('coord')">
+                    <span class="cm-ico">📌</span>显示坐标
+                </button>
+                <div class="cm-sep"></div>
+                <button class="cm-item" @click="menuAction('center')">
+                    <span class="cm-ico">◎</span>将此处置于地图中间
+                </button>
+            </div>
+        </div>
+        <iframe src="/map.html" style="width: 100%; height: 600px; border: none;" frameborder="0" title="门店地图"></iframe>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount, ref, watch, nextTick, shallowRef, markRaw } from "vue";
+import type * as TYPE_L from "leaflet";
+
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+
+import type { Franchise } from "@/data/franchise";
+
+type StoreImage = {
+    type: string;
+    url: string;
+    title?: string;
+    order?: number;
+};
+
+type CoordSource = "3d4d" | "q" | "at";
+
+type Store = {
+    id: string;
+    nameZh: string;
+    cityZh: string;
+    addressZh: string;
+
+    lat: number;
+    lng: number;
+
+    googleUrl: string;
+    coordSource: CoordSource;
+    confidence: "high" | "mid" | "low";
+
+    images?: StoreImage[];
+    rating?: number;
+    reviews?: number;
+    categoryZh?: string;
+    priceTextZh?: string;
+    openTimeHintZh?: string;
+    statusZh?: string;
+};
+
+const mapElDesktop = ref<HTMLDivElement | null>(null);
+const mapElMobile = ref<HTMLDivElement | null>(null);
+
+const map = shallowRef<TYPE_L.Map | null>(null);
+
+// 图层控制相关
+let layerCtrl: TYPE_L.Control.Layers | null = null;
+// 门店层
+let storeLayer: any | null = null;
+// 临时标记层
+let tempLayer: TYPE_L.LayerGroup | null = null;
+
+const markers = new Map<string, TYPE_L.Marker>();
+const stores = ref<Store[]>([]);
+const keyword = ref("");
+const panelOpen = ref(true);
+const mapReady = ref(false);
+
+/** 右键菜单状态 */
+const menu = ref({
+    open: false,
+    x: 0,
+    y: 0,
+    latlng: null as null | TYPE_L.LatLng,
+});
+
+// 你原来留着也行（但真正清理靠 tempLayer.clearLayers）
+let tempMarkers: TYPE_L.Marker[] = [];
+
+function isMobile() {
+    return window.matchMedia?.("(max-width: 768px)")?.matches ?? false;
+}
+
+function closeMenu() {
+    menu.value.open = false;
+}
+
+function clampMenuToViewport(x: number, y: number) {
+    const padding = 8;
+    const w = 220;
+    const h = 250;
+    const maxX = window.innerWidth - w - padding;
+    const maxY = window.innerHeight - h - padding;
+    return {
+        x: Math.max(padding, Math.min(x, maxX)),
+        y: Math.max(padding, Math.min(y, maxY)),
+    };
+}
+
+/** 解析 Google Maps 链接中的坐标 */
+function parseGoogleMapsLatLng(url: string) {
+    const u = String(url || "").trim();
+    if (!u) return null;
+
+    // 1) POI 真坐标：!3dLAT!4dLNG（最可信）
+    const m1 = u.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+    if (m1) {
+        return {
+            lat: Number(m1[1]),
+            lng: Number(m1[2]),
+            source: "3d4d" as const,
+            confidence: "high" as const,
+        };
+    }
+
+    // 2) 分享链接可能带 ?q=lat,lng 或 ?query=lat,lng
+    const mq = u.match(/[?&](?:q|query)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (mq) {
+        return {
+            lat: Number(mq[1]),
+            lng: Number(mq[2]),
+            source: "q" as const,
+            confidence: "mid" as const,
+        };
+    }
+
+    // 3) 视野中心：@LAT,LNG（不保证是 POI）
+    const m2 = u.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+    if (m2) {
+        return {
+            lat: Number(m2[1]),
+            lng: Number(m2[2]),
+            source: "at" as const,
+            confidence: "low" as const,
+        };
+    }
+
+    return null;
+}
+
+async function load() {
+    const u = new URL("/api/franchise.json", window.location.origin);
+    u.searchParams.set("q", keyword.value || "");
+
+    const r = await fetch(u.toString());
+    if (!r.ok) {
+        const t = await r.text();
+        console.error("[franchise api failed]", r.status, r.url, t.slice(0, 200));
+        stores.value = [];
+        renderMarkers();
+        return;
+    }
+
+    const j = await r.json();
+    const rawList = (j.list ?? []) as Franchise[];
+
+    const parsedList: Store[] = [];
+
+    for (const item of rawList) {
+        const googleUrl = (item as any).googleUrl as string;
+        const p = parseGoogleMapsLatLng(googleUrl);
+
+        if (!p) {
+            console.warn("[skip] googleUrl missing/invalid:", (item as any).id, googleUrl);
+            continue;
+        }
+
+        // 强烈建议：过滤 @ 视角坐标，避免偏几百米/几公里
+        if (p.confidence === "low") {
+            console.warn("[skip] low confidence coord (@ center):", (item as any).id, googleUrl);
+            continue;
+        }
+
+        parsedList.push({
+            ...(item as any),
+            lat: p.lat,
+            lng: p.lng,
+            googleUrl,
+            coordSource: p.source,
+            confidence: p.confidence,
+        });
+    }
+
+    stores.value = parsedList;
+    renderMarkers();
+}
+
+function esc(v: any) {
+    const s = String(v ?? "");
+    return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function buildPopupHtml(s: Store) {
+    const first = Array.isArray(s.images) && s.images.length > 0 ? String(s.images[0].url || "") : "";
+
+    const metaLine = [
+        typeof s.rating === "number" ? `⭐ ${s.rating.toFixed(1)}` : "",
+        typeof s.reviews === "number" ? `(${s.reviews})` : "",
+        s.categoryZh ? esc(s.categoryZh) : "",
+        s.priceTextZh ? esc(s.priceTextZh) : "",
+    ]
+        .filter(Boolean)
+        .join(" ");
+
+    const statusLine = [
+        s.statusZh ? `<span class="poi-status">${esc(s.statusZh)}</span>` : "",
+        s.openTimeHintZh ? `<span class="poi-openhint">${esc(s.openTimeHintZh)}</span>` : "",
+    ]
+        .filter(Boolean)
+        .join(" · ");
+
+    return `
+  <div class="poi-card">
+    <div class="poi-media">
+      ${first
+            ? `<img class="poi-img" src="${esc(first)}" alt="${esc(s.nameZh)}" loading="lazy" />`
+            : `<div class="poi-img-fallback">暂无宣传图</div>`}
+    </div>
+
+    <div class="poi-body">
+      <div class="poi-title">${esc(s.nameZh)}</div>
+      ${metaLine ? `<div class="poi-meta">${metaLine}</div>` : ""}
+      ${statusLine ? `<div class="poi-statusline">${statusLine}</div>` : ""}
+      <div class="poi-addr">${esc(s.cityZh)} · ${esc(s.addressZh)}</div>
+    </div>
+  </div>
+  `;
+}
+
+function isDesktopHover() {
+    return window.matchMedia?.("(hover: hover) and (pointer: fine)")?.matches ?? false;
+}
+
+function setMarkerTooltipOpacity(m: L.Marker, opacity: "0" | "1") {
+    const tip = m.getTooltip();
+    const el = (tip as any)?.getElement?.() as HTMLElement | undefined;
+    if (el) el.style.opacity = opacity;
+}
+
+function renderMarkers() {
+    // 清空门店图层（不要逐个 remove）
+    storeLayer?.clearLayers();
+    markers.clear();
+    if (!map.value || !storeLayer) return;
+
+    const hoverable = isDesktopHover();
+    const mobile = isMobile();
+
+    for (const s of stores.value) {
+        const m = window.L.marker([s.lat, s.lng]).addTo(storeLayer);
+
+        m.bindTooltip(s.nameZh, {
+            permanent: true,
+            direction: "bottom",
+            offset: [0, 10],
+            opacity: 1,
+            interactive: false,
+            className: "poi-label",
+        });
+
+        m.bindPopup(buildPopupHtml(s), {
+            maxWidth: mobile ? 320 : 420,
+            minWidth: mobile ? 220 : 260,
+            closeButton: true,
+            autoPan: true,
+            autoPanPaddingTopLeft: mobile ? [12, 170] : [12, 12],
+            autoPanPaddingBottomRight: mobile ? [12, 180] : [12, 160],
+            className: "poi-popup",
+            offset: mobile ? [0, 18] : [0, 10],
+        });
+
+        m.on("popupopen", () => setMarkerTooltipOpacity(m, "0"));
+        m.on("popupclose", () => setMarkerTooltipOpacity(m, "1"));
+
+        if (hoverable) {
+            m.on("mouseover", () => m.openPopup());
+            m.on("mouseout", () => m.closePopup());
+        }
+
+        markers.set(s.id, m);
+    }
+
+    if (stores.value.length > 0) {
+        const latlngs = stores.value.map((s) => [s.lat, s.lng] as [number, number]);
+        map.value.fitBounds(latlngs, { padding: [30, 30] });
+    }
+}
+
+function focus(s: Store) {
+    if (!mapReady.value) return;
+    const m = map.value as any;
+    if (!m) return;                 // 防止 map 已销毁/未初始化
+    if (!m._loaded) return;         // Leaflet 还没 ready 时也别操作
+
+    m.setView([s.lat, s.lng], 16, { animate: true });
+
+    const mk = markers.get(s.id);
+    if (mk) mk.openPopup();
+
+    if (isMobile()) panelOpen.value = false;
+}
+
+/** 右键菜单动作 */
+async function menuAction(type: "marker" | "address" | "center" | "coord") {
+    const latlng = menu.value.latlng;
+    if (!map.value || !latlng) return;
+
+    try {
+        if (type === "center") {
+            map.value.panTo(latlng);
+            return;
+        }
+
+        if (type === "marker") {
+            if (!tempLayer) return;
+
+            const mk = window.L.marker(latlng).addTo(tempLayer); // 加到临时标记层
+            mk.bindPopup(
+                `<div style="font-weight:800">临时标记</div>
+                <div style="color:#666;font-size:12px">${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}</div>`
+            );
+            mk.openPopup();
+            return;
+        }
+
+        if (type === "address") {
+            const url = new URL("https://nominatim.openstreetmap.org/reverse");
+            url.searchParams.set("format", "json");
+            url.searchParams.set("lat", String(latlng.lat));
+            url.searchParams.set("lon", String(latlng.lng));
+
+            const r = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+            const j = await r.json();
+            const name = j?.display_name || `${latlng.lat}, ${latlng.lng}`;
+
+            window.L.popup({ maxWidth: 320 })
+                .setLatLng(latlng)
+                .setContent(
+                    `<div style="font-weight:800;margin-bottom:6px">地址</div>
+           <div style="font-size:12px;line-height:1.4;color:#333">${esc(name)}</div>`
+                )
+                .openOn(map.value);
+            return;
+        }
+
+        if (type === "coord") {
+            const latTxt = latlng.lat.toFixed(6);
+            const lngTxt = latlng.lng.toFixed(6);
+            const text = `${latTxt}, ${lngTxt}`;
+
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch { }
+
+            window.L.popup({ maxWidth: 260 })
+                .setLatLng(latlng)
+                .setContent(
+                    `<div style="font-weight:800;margin-bottom:6px">坐标</div>
+           <div style="font-size:12px;line-height:1.5;color:#333">
+             Lat: ${latTxt}<br/>Lon: ${lngTxt}
+           </div>`
+                )
+                .openOn(map.value);
+            return;
+        }
+    } catch (e: any) {
+        console.error("[menuAction failed]", type, e?.message || e);
+        window.L.popup({ closeButton: true, autoClose: true })
+            .setLatLng(latlng)
+            .setContent(
+                `<div style="color:#e11d48;font-weight:800">操作失败</div>
+         <div style="font-size:12px;color:#666">${esc(e?.message || String(e))}</div>`
+            )
+            .openOn(map.value);
+    } finally {
+        closeMenu();
+    }
+}
+
+function destroyMap() {
+    mapReady.value = false;
+    if (!map.value) return;
+
+    try {
+        map.value.stop();
+        map.value.closePopup();
+    } catch { }
+
+    // 清理控件
+    try {
+        layerCtrl?.remove();
+    } catch { }
+    layerCtrl = null;
+
+    // 清理图层
+    try {
+        storeLayer?.clearLayers();
+        tempLayer?.clearLayers();
+    } catch { }
+    storeLayer = null;
+    tempLayer = null;
+
+    // 兼容你原来的数组
+    tempMarkers = [];
+
+    try {
+        map.value.off();
+        map.value.remove();
+    } finally {
+        map.value = null;
+    }
+
+    markers.clear();
+}
+
+function initMap(container: HTMLDivElement) {
+    destroyMap();
+
+    const anyEl = container as any;
+    if (anyEl._leaflet_id) {
+        try { delete anyEl._leaflet_id; } catch { }
+        try { anyEl._leaflet_id = undefined; } catch { }
+    }
+
+    alert(333)
+
+    const m = markRaw(window.L.map(container, {
+        zoomControl: true,
+        maxZoom: 18,  // 最大缩放距离
+        minZoom: 10,  // 最小缩放距离
+
+    }).setView([13.736, 100.523], 12));
+
+    console.log("has locate?", (window.L.control as any).locate, (window as any).L?.control?.locate);
+
+
+    /* ================= 比例尺 ================= */
+    // imperial 显示：英尺（ft） / 英里（mi）
+    // metric 显示：米（m） / 千米（km）
+    markRaw(window.L.control.scale({ metric: true, imperial: false, position: "bottomleft" })).addTo(m);
+
+    /* ================= 定位控件 ================= */
+
+    console.log(window.L.control, 'L.control')
+    markRaw(
+        (window.L.control as any).locate({
+            position: "topright",
+            flyTo: true,
+            showCompass: true,
+            keepCurrentZoomLevel: false,
+        })
+    ).addTo(m);
+
+    map.value = m;
+
+    // 底图
+    const osm = markRaw(window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap",
+    }));
+
+    const cartoPositron = markRaw(window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        attribution: "© OpenStreetMap © CARTO",
+    }));
+
+    const cartoVoyager = markRaw(window.L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        attribution: "© OpenStreetMap © CARTO",
+    }));
+
+    cartoVoyager.addTo(m);
+
+    const baseLayers: Record<string, L.TileLayer> = {
+        "标准 OSM": osm,
+        "浅色（推荐）": cartoPositron,
+        "彩色（推荐）": cartoVoyager,
+    };
+
+    // 覆盖层
+    storeLayer = markRaw(
+        (window.L as any).markerClusterGroup({
+            chunkedLoading: true,
+            showCoverageOnHover: false,
+            maxClusterRadius: 60,
+            spiderfyOnMaxZoom: true,
+            disableClusteringAtZoom: 17, // 缩到很近就不聚合
+        }).addTo(m)
+    );
+
+    alert(3444)
+
+    tempLayer = markRaw(window.L.layerGroup().addTo(m));
+
+    const overlays: Record<string, L.Layer> = {
+        "门店": storeLayer,
+        "临时标记": tempLayer,
+    };
+
+    layerCtrl = markRaw(window.L.control.layers(baseLayers, overlays, { position: "topright" }).addTo(m));
+
+    // 事件
+    m.on("contextmenu", (e: L.LeafletMouseEvent) => {
+        m.closePopup();
+        const ev = e.originalEvent as MouseEvent;
+        const p = clampMenuToViewport(ev.pageX, ev.pageY);
+        menu.value.open = true;
+        menu.value.x = p.x;
+        menu.value.y = p.y;
+        menu.value.latlng = e.latlng;
+    });
+
+    m.on("click", closeMenu);
+    m.on("movestart", closeMenu);
+    m.on("zoomstart", closeMenu);
+
+    mapReady.value = true;
+}
+
+
+async function initial() {
+    const container = isMobile() ? mapElMobile.value : mapElDesktop.value;
+    if (!container) return;
+
+    initMap(container);
+    await load();
+
+    await nextTick();
+    map.value?.invalidateSize();
+}
+
+/** 生命周期 / 监听 */
+let resizeTimer: any = null;
+
+function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(async () => {
+        await nextTick();
+        map.value?.invalidateSize({ pan: false });
+    }, 120);
+}
+
+function onKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") closeMenu();
+}
+
+alert(1)
+
+onMounted(() => {
+    alert(1)
+    console.log(window.L)
+    initial();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("keydown", onKeydown);
+});
+
+watch(panelOpen, async () => {
+    await nextTick();
+    map.value?.invalidateSize();
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener("resize", onResize);
+    window.removeEventListener("keydown", onKeydown);
+    destroyMap();
+});
+</script>
+
+
+<style>
+/* popup 内容不在 Vue DOM 内，UnoCSS 不会扫到 => 少量全局 CSS */
+
+/* 桌面默认：卡片宽一点 */
+.poi-card {
+    width: 340px;
+    max-width: 340px;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+}
+
+.poi-media {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f3f4f6;
+}
+
+.poi-img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.18s ease;
+}
+
+.poi-card:hover .poi-img {
+    transform: scale(1.02);
+}
+
+.poi-img-fallback {
+    height: 150px;
+    display: grid;
+    place-items: center;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.poi-body {
+    padding: 10px 2px 0 2px;
+}
+
+.poi-title {
+    font-weight: 800;
+    font-size: 18px;
+    line-height: 1.2;
+}
+
+.poi-meta {
+    margin-top: 6px;
+    color: #444;
+    font-size: 13px;
+}
+
+.poi-statusline {
+    margin-top: 6px;
+    font-size: 13px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.poi-status {
+    color: #e11d48;
+    font-weight: 700;
+}
+
+.poi-openhint {
+    color: #444;
+}
+
+.poi-addr {
+    margin-top: 6px;
+    color: #666;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+/* Leaflet popup wrapper */
+.leaflet-popup-content-wrapper {
+    border-radius: 16px;
+}
+
+.leaflet-popup-content {
+    margin: 12px;
+}
+
+/* 移动端弹窗瘦身适配 */
+@media (max-width: 768px) {
+    .poi-card {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .poi-img,
+    .poi-img-fallback {
+        height: 92px !important;
+    }
+
+    .poi-title {
+        font-size: 16px !important;
+        line-height: 1.25 !important;
+    }
+
+    .poi-meta,
+    .poi-statusline {
+        display: none !important;
+    }
+
+    .poi-addr {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .leaflet-popup-content {
+        margin: 10px !important;
+        max-width: calc(100vw - 40px);
+    }
+}
+
+/* 地图上永久名字标签（Tooltip） */
+.poi-label {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* 白色胶囊 */
+.poi-label .leaflet-tooltip-content {
+    display: inline-block;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    font-size: 12px;
+    font-weight: 800;
+    color: #111;
+
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+    padding: 4px 8px;
+}
+
+/* 去掉默认小尖角 */
+.poi-label.leaflet-tooltip-top::before {
+    display: none !important;
+}
+
+@media (max-width: 768px) {
+    .poi-label .leaflet-tooltip-content {
+        max-width: 140px;
+        font-size: 11px;
+        padding: 3px 7px;
+    }
+}
+
+.poi-label {
+    transform: translateY(2px);
+}
+
+/* OSM 风格右键菜单 */
+.context-menu {
+    position: absolute;
+    width: 220px;
+    background: rgba(20, 20, 20, 0.96);
+    color: #fff;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(6px);
+}
+
+.cm-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 10px;
+    text-align: left;
+    font-size: 13px;
+}
+
+.cm-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.cm-item:active {
+    transform: scale(0.99);
+}
+
+.cm-ico {
+    width: 18px;
+    display: inline-flex;
+    justify-content: center;
+    opacity: 0.95;
+}
+
+.cm-sep {
+    height: 1px;
+    margin: 6px 4px;
+    background: rgba(255, 255, 255, 0.12);
+}
+</style>
